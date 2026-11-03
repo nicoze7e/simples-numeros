@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SIMPLES NUMEROS · prueba de inicio de sesión</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SIMPLES NUMEROS">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0c0f0c">
+<style>
+:root{--bg:#f1f3f1;--surface:#fff;--ink:#0c0f0c;--muted:#5f6a5f;--line:#d8ddd8;--ok:#14501f;--bad:#a12a1c;--warn:#8a5a00}
+@media (prefers-color-scheme: dark){:root{--bg:#0b0e0b;--surface:#151915;--ink:#eef2ee;--muted:#9aa89a;--line:#283028;--ok:#9fdc86;--bad:#ff8f80;--warn:#e6bd3a;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;
+  padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(28px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+main{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+h1{font-size:20px;margin:6px 0 0}
+h2{font-size:13px;letter-spacing:.1em;text-transform:uppercase;margin:0 0 8px}
+p{margin:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px}
+.small{font-size:13px;color:var(--muted)}
+label{display:block;font-size:13px;color:var(--muted);margin-top:8px}
+input{width:100%;min-height:44px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);padding:0 12px;font:14px ui-monospace,Menlo,monospace}
+button{min-height:48px;border-radius:12px;border:1.5px solid var(--ink);background:var(--ink);color:var(--bg);font:700 14px system-ui;padding:0 16px;cursor:pointer;margin-top:10px;width:100%}
+button.s{background:transparent;color:var(--ink)}
+button:disabled{opacity:.35;cursor:not-allowed}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px}
+.kv b{color:var(--muted);font-weight:500}
+#log{font:12px/1.5 ui-monospace,Menlo,monospace;max-height:320px;overflow:auto;white-space:pre-wrap;word-break:break-word}
+#log .ok{color:var(--ok)} #log .bad{color:var(--bad)} #log .warn{color:var(--warn)}
+</style>
+</head>
+<body>
+<main>
+  <h1>SIMPLES NUMEROS · prueba de inicio de sesión</h1>
+  <p class="small">Prototipo técnico. Sirve para comprobar si «Iniciar sesión con Google» funciona y se mantiene cuando esta página está instalada en el iPhone. No es la app final.</p>
+
+  <section class="card" id="cCfg">
+    <h2>0 · Configuración (una vez)</h2>
+    <label for="cid">Client ID</label><input id="cid" autocomplete="off" placeholder="1234-abc.apps.googleusercontent.com">
+    <label for="key">API key</label><input id="key" autocomplete="off" placeholder="AIza...">
+    <label for="app">Número de proyecto</label><input id="app" autocomplete="off" inputmode="numeric" placeholder="123456789012">
+    <button id="bCfg">Guardar configuración</button>
+  </section>
+
+  <section class="card">
+    <h2>Estado</h2>
+    <div class="kv">
+      <b>Modo</b><span id="eModo">-</span>
+      <b>Sesión</b><span id="eSes">sin iniciar</span>
+      <b>Vence en</b><span id="eVen">-</span>
+      <b>Planilla</b><span id="ePla">sin elegir</span>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>1 · Sesión de Google</h2>
+    <button id="bIni" disabled>Iniciar sesión con Google</button>
+    <button id="bRen" class="s" disabled>Probar renovación silenciosa</button>
+    <button id="bSal" class="s" disabled>Cerrar sesión</button>
+  </section>
+
+  <section class="card">
+    <h2>2 · Tu planilla</h2>
+    <button id="bPic" disabled>Elegir mi planilla</button>
+    <button id="bMon" class="s" disabled>Leer mis monedas (AJUSTES)</button>
+  </section>
+
+  <section class="card">
+    <h2>3 · Escribir una fila de prueba</h2>
+    <p class="small">Anota 1 en el primer renglón libre del mes. Después podés borrarla.</p>
+    <button id="bEsc" disabled>Escribir fila de prueba</button>
+    <button id="bBor" class="s" disabled>Borrar la fila de prueba</button>
+  </section>
+
+  <section class="card">
+    <h2>Registro</h2>
+    <div id="log" aria-live="polite"></div>
+  </section>
+</main>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://apis.google.com/js/api.js" async defer></script>
+<script>
+(function(){
+  var SCOPE='https://www.googleapis.com/auth/drive.file';
+  var PRIMERA=19, BLOQUE=101, N=100;
+  var cfg={}, tok=null, exp=0, tc=null, fileId='', filaPrueba=0, pickerOk=false;
+  function $(i){return document.getElementById(i)}
+  function load(k){try{return JSON.parse(localStorage.getItem(k)||'null')}catch(e){return null}}
+  function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){log('No se pudo guardar en el navegador: '+e.message,'bad')}}
+  function hora(){return new Date().toLocaleTimeString('es-AR')}
+  function log(m,c){var d=document.createElement('div');if(c)d.className=c;d.textContent=hora()+'  '+m;var l=$('log');l.insertBefore(d,l.firstChild)}
+  function standalone(){return !!(window.navigator.standalone||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches))}
+  function pintar(){
+    $('eModo').textContent=standalone()?'instalada (pantalla completa)':'navegador';
+    var vivo=tok&&Date.now()<exp;
+    $('eSes').textContent=vivo?'iniciada':(tok?'vencida':'sin iniciar');
+    $('eVen').textContent=vivo?Math.max(0,Math.round((exp-Date.now())/60000))+' min':'-';
+    $('ePla').textContent=fileId?fileId.slice(0,10)+'…':'sin elegir';
+    var listo=!!(cfg.clientId&&cfg.apiKey&&cfg.appId);
+    $('bIni').disabled=!listo; $('bRen').disabled=!(listo&&tc); $('bSal').disabled=!tok;
+    $('bPic').disabled=!vivo; $('bMon').disabled=!(vivo&&fileId);
+    $('bEsc').disabled=!(vivo&&fileId); $('bBor').disabled=!(vivo&&fileId&&filaPrueba);
+  }
+  setInterval(pintar,15000);
+
+  function iniciarCliente(){
+    if(tc||!cfg.clientId||!(window.google&&google.accounts&&google.accounts.oauth2))return;
+    tc=google.accounts.oauth2.initTokenClient({
+      client_id:cfg.clientId, scope:SCOPE,
+      callback:function(r){
+        if(r.error){log('Google respondió con error: '+r.error+(r.error_description?' · '+r.error_description:''),'bad');return}
+        tok=r.access_token; exp=Date.now()+(Number(r.expires_in)||3600)*1000-60000;
+        save('sn_tok',{t:tok,e:exp}); log('Sesión iniciada. Dura unos '+Math.round((Number(r.expires_in)||3600)/60)+' min.','ok'); pintar();
+      },
+      error_callback:function(e){log('No se completó el inicio de sesión: '+(e&&e.type?e.type:'desconocido')+(e&&e.message?' · '+e.message:''),'bad')}
+    });
+    pintar();
+  }
+  function api(u,opt){
+    opt=opt||{}; opt.headers=Object.assign({Authorization:'Bearer '+tok},opt.headers||{});
+    return fetch(u,opt).then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error((j.error&&j.error.message)||('HTTP '+r.status));return j})});
+  }
+  var S='https://sheets.googleapis.com/v4/spreadsheets/';
+  function rango(r){return encodeURIComponent(r)}
+
+  $('bCfg').onclick=function(){
+    cfg={clientId:$('cid').value.trim(),apiKey:$('key').value.trim(),appId:$('app').value.trim()};
+    if(!cfg.clientId||!cfg.apiKey||!cfg.appId){log('Faltan datos de configuración.','bad');return}
+    save('sn_cfg',cfg); log('Configuración guardada.','ok'); iniciarCliente(); pintar();
+  };
+  $('bIni').onclick=function(){iniciarCliente(); if(!tc){log('El script de Google todavía no cargó. Probá de nuevo en unos segundos.','warn');return} log('Abriendo el inicio de sesión de Google…'); tc.requestAccessToken({prompt:tok?'':'consent'})};
+  $('bRen').onclick=function(){log('Pidiendo renovación sin ventana…'); tc.requestAccessToken({prompt:''})};
+  $('bSal').onclick=function(){
+    if(tok&&window.google)google.accounts.oauth2.revoke(tok,function(){log('Acceso revocado en Google.','ok')});
+    tok=null;exp=0;save('sn_tok',null);log('Sesión cerrada en este dispositivo.');pintar();
+  };
+  $('bPic').onclick=function(){
+    if(!(window.gapi)){log('El selector de Google no cargó.','bad');return}
+    gapi.load('picker',function(){
+      var v=new google.picker.DocsView(google.picker.ViewId.SPREADSHEETS).setMode(google.picker.DocsViewMode.LIST);
+      new google.picker.PickerBuilder().addView(v).setOAuthToken(tok).setDeveloperKey(cfg.apiKey).setAppId(cfg.appId)
+        .setCallback(function(d){
+          if(d.action===google.picker.Action.PICKED){fileId=d.docs[0].id;save('sn_file',fileId);log('Planilla elegida: '+d.docs[0].name,'ok');pintar()}
+          else if(d.action===google.picker.Action.CANCEL)log('Selección cancelada.');
+        }).build().setVisible(true);
+    });
+  };
+  $('bMon').onclick=function(){
+    api(S+fileId+'/values/'+rango('AJUSTES!B3:B9')).then(function(j){
+      var m=(j.values||[]).map(function(f){return f[0]}).filter(Boolean);
+      log('Monedas leídas: '+(m.join(' | ')||'ninguna'),'ok');
+    }).catch(function(e){log('No pude leer AJUSTES: '+e.message,'bad')});
+  };
+  $('bEsc').onclick=function(){
+    var k=new Date().getMonth()+1, ini=PRIMERA+BLOQUE*(k-1);
+    api(S+fileId+'/values/'+rango('REGISTRO!E'+ini+':E'+(ini+N-1))).then(function(j){
+      var v=j.values||[], i=0; while(i<N&&v[i]&&v[i][0]!==undefined&&v[i][0]!=='')i++;
+      if(i>=N)throw new Error('el mes está lleno');
+      var f=ini+i;
+      return api(S+fileId+'/values/'+rango('REGISTRO!D'+f+':G'+f)+'?valueInputOption=USER_ENTERED',{method:'PUT',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({values:[['USD $',1,'SALIDAS','prueba desde la PWA']]})}).then(function(){filaPrueba=f;log('Escribí la fila de prueba en REGISTRO, fila '+f+'. Mirala en la hoja.','ok');pintar()});
+    }).catch(function(e){log('No pude escribir: '+e.message,'bad')});
+  };
+  $('bBor').onclick=function(){
+    api(S+fileId+'/values/'+rango('REGISTRO!D'+filaPrueba+':G'+filaPrueba)+':clear',{method:'POST'}).then(function(){log('Borré la fila '+filaPrueba+'.','ok');filaPrueba=0;pintar()}).catch(function(e){log('No pude borrar: '+e.message,'bad')});
+  };
+
+  // arranque
+  cfg=load('sn_cfg')||{}; fileId=load('sn_file')||'';
+  if(cfg.clientId){$('cid').value=cfg.clientId;$('key').value=cfg.apiKey||'';$('app').value=cfg.appId||''}
+  var t=load('sn_tok'); if(t&&t.t){tok=t.t;exp=t.e; log(Date.now()<exp?'Sesión anterior recuperada: sigue vigente.':'Había una sesión anterior pero ya venció.',Date.now()<exp?'ok':'warn')}
+  log('Abierta en modo: '+(standalone()?'instalada':'navegador')+' · '+navigator.userAgent.slice(0,90));
+  window.addEventListener('load',function(){setTimeout(iniciarCliente,800)});
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(e){log('Service worker: '+e.message,'warn')});
+  pintar();
+})();
+</script>
+</body>
+</html>
