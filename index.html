@@ -3,386 +3,104 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ZIMPLES NUMBREZ · Tus números son tuyos</title>
-<meta name="description" content="Una planilla de Google y una app para el celular. Anotás lo que entra y lo que sale en tu propia cuenta, sin categorías ni fórmulas.">
-<link rel="icon" href="app/icon-192.png">
-<style>*{box-sizing:border-box}body{margin:0}</style>
+<meta name="robots" content="noindex, nofollow">
+<title>Tu compra · ZIMPLES NUMBREZ</title>
+<link rel="icon" href="../app/icon-192.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap">
 <style>
-/* Concepto: neón nocturno (igual que la app). La landing habla como la planilla. Mismos números en mono, negro sobre blanco y los colores de cada moneda como único acento. Una columna de lectura con la app a la vista desde el primer pantallazo. */
-:root{
-  color-scheme:dark;
-  --bg:#0a0a0b; --surface:#131316; --ink:#f4f4f0; --muted:#8c8c94; --line:#26262b;
-  --accent:#c6ff3d; --accent-glow:rgba(198,255,61,.28); --coral-glow:rgba(255,92,122,.26);
-  --out-bg:#ff5c7a; --out-fg:#1a0a0e; --in-bg:#c6ff3d; --in-fg:#0c1500;
-  --usd:#c6ff3d; --ars:#5cc8ff; --eur:#ffd23f; --key:#1b1b20; --ok:#c6ff3d;
-  --f-ui:'Space Grotesk','Segoe UI',system-ui,sans-serif; --f-num:'DM Mono',ui-monospace,Menlo,monospace;
-}
-body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:16px;line-height:1.55;
-  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 56px}
-.wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:72px;min-width:0}
-h1,h2,h3{margin:0;text-wrap:balance}
-h1{font:800 clamp(32px,6.4vw,58px)/1.02 var(--f-ui);letter-spacing:-.025em}
-h2{font:700 clamp(24px,4vw,32px)/1.12 var(--f-ui);letter-spacing:-.02em}
-h3{font:700 18px/1.25 var(--f-ui)}
+*{box-sizing:border-box}
+:root{color-scheme:dark;--bg:#0a0a0b;--surface:#131316;--ink:#f4f4f0;--muted:#8c8c94;--line:#26262b;--accent:#c6ff3d;--glow:rgba(198,255,61,.28);--ars:#5cc8ff;--eur:#ffd23f;
+  --f-ui:'Space Grotesk','Segoe UI',system-ui,sans-serif;--f-num:'DM Mono',ui-monospace,Menlo,monospace}
+body{margin:0;background:var(--bg);background-image:radial-gradient(110% 50% at 50% -8%,rgba(198,255,61,.10),transparent 60%);background-attachment:fixed;color:var(--ink);font:16px/1.55 var(--f-ui);
+  padding:28px max(16px,env(safe-area-inset-right)) 56px max(16px,env(safe-area-inset-left))}
+.wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+.brand{font-weight:700;font-size:15px;letter-spacing:.14em;margin:0}
+.brand span{color:var(--accent)}
+h1{margin:0;font:700 clamp(30px,7vw,44px)/1.05 var(--f-ui);letter-spacing:-.025em;text-wrap:balance}
+h1 em{font-style:normal;border-bottom:5px solid var(--accent)}
+h2{margin:0;font:700 19px/1.25 var(--f-ui)}
 p{margin:0}
-.draft{font:500 12px var(--f-num);letter-spacing:.04em;color:var(--muted);background:var(--surface);border-bottom:1px solid var(--line);margin:0 calc(-1*max(16px,env(safe-area-inset-left,0px)));padding:8px max(16px,env(safe-area-inset-left,0px))}
-.brand{font:500 13px var(--f-num);letter-spacing:.18em;padding-top:28px}
-.hero{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:40px;align-items:center}
-.hero .lead{display:flex;flex-direction:column;gap:20px}
-.hero .sub{font-size:18px;color:var(--muted);max-width:46ch}
-.btns{display:flex;flex-wrap:wrap;gap:10px;padding-top:6px}
-.btn{display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:0 22px;border-radius:14px;font:700 15px var(--f-ui);letter-spacing:.02em;text-decoration:none;border:1.5px solid var(--ink)}
-.btn.p{background:var(--ink);color:var(--bg)}
-.btn.s{background:transparent;color:var(--ink)}
-.btn:focus-visible,summary:focus-visible,.tab:focus-visible{outline:3px solid var(--usd);outline-offset:2px}
-.small{font-size:13.5px;color:var(--muted)}
-/* maqueta de la app */
-.phone{justify-self:center;width:100%;max-width:300px;background:var(--surface);border:1.5px solid var(--ink);border-radius:30px;padding:14px 14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 18px 0 -8px var(--line)}
-.ph-top{display:flex;justify-content:space-between;font:500 10px var(--f-num);letter-spacing:.14em}
-.ph-top span:last-child{color:var(--muted);letter-spacing:0}
-.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--key);padding:4px;border-radius:12px}
-.seg b{display:block;text-align:center;font:700 11px var(--f-ui);letter-spacing:.07em;padding:10px 0;border-radius:9px;color:var(--muted)}
-.seg b.on{background:var(--out-bg);color:var(--out-fg)}
-.chips{display:flex;gap:6px}
-.chips span{font:500 11px var(--f-num);border:1.5px solid var(--line);border-radius:999px;padding:6px 10px;display:inline-flex;align-items:center;gap:6px}
-.chips span.on{border-color:var(--ink);background:var(--key)}
-.chips i{width:8px;height:8px;border-radius:50%;display:block}
-.amt{display:flex;justify-content:flex-end;align-items:baseline;gap:8px;padding:6px 2px}
-.amt small{font:500 11px var(--f-num);color:var(--muted)}
-.amt strong{font:500 40px/1 var(--f-num);letter-spacing:-.02em}
-.keys{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
-.keys span{background:var(--key);border-radius:10px;text-align:center;font:500 16px/38px var(--f-num)}
-.go{background:var(--out-bg);color:var(--out-fg);text-align:center;border-radius:13px;font:700 12px/44px var(--f-ui);letter-spacing:.08em}
-/* secciones */
-.sec{display:flex;flex-direction:column;gap:24px}
-.sec>.kick{font:500 12px var(--f-num);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
-.three{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:28px}
-.three>div{display:flex;flex-direction:column;gap:8px;border-top:2px solid var(--ink);padding-top:14px}
-.three p{color:var(--muted)}
-.three .c1{border-top-color:var(--usd)} .three .c2{border-top-color:var(--ars)} .three .c3{border-top-color:var(--eur)}
-.uses{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:12px}
-.uses div{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:6px}
-.uses b{font:700 12px var(--f-ui);letter-spacing:.1em}
-.uses p{font-size:14.5px;color:var(--muted)}
-.steps{display:flex;flex-direction:column;gap:18px;counter-reset:s;padding:0;margin:0;list-style:none}
-.step{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:22px 22px 20px;display:grid;grid-template-columns:48px minmax(0,1fr);gap:4px 16px}
-.step::before{counter-increment:s;content:counter(s);grid-row:1/3;font:500 38px/1 var(--f-num);color:var(--ink)}
-.step h3{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px}
-.step h3 small{font:500 12px var(--f-num);color:var(--muted)}
-.step ol{margin:10px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:6px;grid-column:2}
-.step .btn{grid-column:2;justify-self:start;margin-top:14px}
-.done{grid-column:2;margin-top:12px;font-size:14px;color:var(--ok);font-weight:600;border-top:1px dashed var(--line);padding-top:10px}
-.done::before{content:"✓ "}
-.tabs{display:flex;gap:6px;grid-column:2;margin-top:12px}
-.tab{min-height:44px;padding:0 18px;border-radius:12px;border:1.5px solid var(--line);background:transparent;color:var(--ink);font:600 14px var(--f-ui);cursor:pointer}
-.tab[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.panel[hidden]{display:none}
-.panel{grid-column:2}
-.panel ol{grid-column:auto;margin-top:12px}
-.test{background:var(--in-bg);color:var(--in-fg);border-radius:18px;padding:18px 20px;display:flex;flex-direction:column;gap:6px}
-.test h3{font-size:16px}
-.faq{display:flex;flex-direction:column}
-details{border-top:1px solid var(--line);padding:2px 0}
-details:last-child{border-bottom:1px solid var(--line)}
-summary{cursor:pointer;min-height:52px;display:flex;align-items:center;font:600 16px var(--f-ui);list-style:none;gap:10px}
-summary::-webkit-details-marker{display:none}
-summary::after{content:"+";margin-left:auto;font:500 20px var(--f-num);color:var(--muted)}
-details[open] summary::after{content:"−"}
-details p{padding:0 0 16px;color:var(--muted);max-width:62ch}
-footer{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:20px}
-
-h1 em{font-style:normal;background:linear-gradient(transparent 82%,var(--hl) 82%,var(--hl) 94%,transparent 94%)}
-h1 em.a{--hl:var(--usd)} h1 em.b{--hl:var(--ars)} h1 em.c{--hl:var(--eur)}
-.trust{display:flex;flex-wrap:wrap;gap:8px 22px;font:500 13px var(--f-ui);color:var(--muted);padding-top:2px}
-.trust span::before{content:"✓ ";color:var(--ok);font-weight:700}
-.phone{max-width:320px}
-.ptabs{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);margin:4px -14px 0;padding:0 14px}
-.ptabs button{min-height:44px;border:0;background:transparent;color:var(--muted);font:600 11px var(--f-ui);letter-spacing:.05em;cursor:pointer;border-top:2px solid transparent;margin-top:-1px}
-.ptabs button[aria-selected="true"]{color:var(--ink);border-top-color:var(--ink)}
-.dscreen{display:flex;flex-direction:column;gap:9px;min-height:372px}
-.keys button{background:var(--key);border:0;border-radius:10px;color:var(--ink);font:500 16px/38px var(--f-num);cursor:pointer;padding:0}
-.keys button:active{opacity:.6}
-.seg button{display:block;width:100%;text-align:center;font:700 11px var(--f-ui);letter-spacing:.07em;padding:10px 0;border-radius:9px;color:var(--muted);border:0;background:transparent;cursor:pointer;min-height:40px}
-.seg button[aria-pressed="true"].o{background:var(--out-bg);color:var(--out-fg)}
-.seg button[aria-pressed="true"].i{background:var(--in-bg);color:var(--in-fg)}
-.chips button{font:500 11px var(--f-num);border:1.5px solid var(--line);border-radius:999px;padding:7px 10px;display:inline-flex;align-items:center;gap:6px;background:transparent;color:var(--ink);cursor:pointer;min-height:34px}
-.chips button[aria-pressed="true"]{border-color:var(--ink);background:var(--key)}
-.go{border:0;width:100%;cursor:pointer}
-.go.i{background:var(--in-bg);color:var(--in-fg)}
-.go:disabled{opacity:.35;cursor:not-allowed}
-.dnote{font:400 11px/1.4 var(--f-ui);color:var(--muted);text-align:center}
-.dtoast{background:var(--ink);color:var(--bg);border-radius:10px;padding:9px 12px;font-size:12.5px}
-.dl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
-.dl li{display:grid;grid-template-columns:38px 1fr auto;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px;align-items:center}
-.dl .d{font:400 11px var(--f-num);color:var(--muted)}
-.dl .m{font:500 13px var(--f-num)}
-.dl .m.in{color:var(--ok)}
-.dtot{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-.dtot div{border:1px solid var(--line);border-radius:10px;padding:7px 8px}
-.dtot small{display:block;font:500 9.5px var(--f-num);color:var(--muted)}
-.dtot b{font:500 14px var(--f-num)}
-.dcards{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-.dcards div{border:1px solid var(--line);border-radius:10px;padding:8px}
-.dcards small{display:block;font:500 9px var(--f-num);color:var(--muted);text-transform:uppercase;line-height:1.25}
-.dcards b{font:500 18px var(--f-num)}
-.dsvg{width:100%;height:auto;display:block}
-.dsvg text{font-family:var(--f-num);font-size:10px;fill:var(--muted)}
-.priv{display:grid;grid-template-columns:minmax(0,1fr);gap:22px}
-.diagram{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:18px 14px 12px}
-.diagram svg{width:100%;height:auto;display:block}
-.diagram text{font-family:var(--f-ui);fill:var(--ink)}
-.diagram .t2{fill:var(--muted);font-size:13px}
-.claims{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:12px}
-.claims div{border-left:3px solid var(--ok);padding:2px 0 2px 14px}
-.claims b{display:block;margin-bottom:2px}
-.claims p{font-size:14.5px;color:var(--muted)}
-.quote{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 18px;font-size:15px}
-.quote q{font-weight:600}
-@media (max-width:760px){
-  .hero{grid-template-columns:1fr}
-  .wrap{gap:56px}
-  .step{grid-template-columns:34px minmax(0,1fr);padding:18px 16px}
-  .step::before{font-size:28px}
-}
-@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
-html{scroll-behavior:smooth}
-
-/* --- Neón nocturno: acentos --- */
-body{background-image:radial-gradient(110% 50% at 50% -8%,rgba(198,255,61,.10),transparent 60%);background-attachment:fixed}
-.brand{font-family:var(--f-ui);font-weight:700;font-size:15px;letter-spacing:.14em}
-.btn.p{background:var(--accent);color:#0c1500;border-color:var(--accent);box-shadow:0 0 28px var(--accent-glow)}
-.btn.s{border-color:var(--line)}
-.btn.s:hover{border-color:var(--accent)}
-.btn:focus-visible,summary:focus-visible,.tab:focus-visible{outline-color:var(--accent)}
-.phone{border-color:var(--line);box-shadow:0 0 60px rgba(198,255,61,.10)}
+.sub{color:var(--muted);font-size:17px}
+.step{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:20px 20px 18px;display:grid;grid-template-columns:40px minmax(0,1fr);gap:6px 14px}
+.step .n{grid-row:1/4;font:500 34px/1 var(--f-num);color:var(--accent)}
+.step p{color:var(--muted)}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:52px;padding:0 24px;border-radius:14px;background:var(--accent);color:#0c1500;font:700 15px var(--f-ui);text-decoration:none;box-shadow:0 0 28px var(--glow);justify-self:start;margin-top:8px}
+.btn:focus-visible,.tab:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.ok{color:var(--accent);font-weight:600;font-size:14px;border-top:1px dashed var(--line);padding-top:10px;margin-top:8px}
+.ok::before{content:"✓ "}
+.tabs{display:flex;gap:6px;margin-top:6px}
+.tab{min-height:42px;padding:0 18px;border-radius:12px;border:1.5px solid var(--line);background:transparent;color:var(--ink);font:600 14px var(--f-ui);cursor:pointer}
 .tab[aria-selected="true"]{background:var(--accent);color:#0c1500;border-color:var(--accent)}
-.ptabs button[aria-selected="true"]{color:var(--accent);border-top-color:var(--accent)}
-.chips button[aria-pressed="true"],.chips span.on{border-color:var(--accent)}
-.three>div{border-top-color:var(--accent)}
-.step::before{color:var(--accent)}
-.dtoast{background:var(--accent);color:#0c1500}
-.dsvg text,.diagram text{font-family:var(--f-ui)}
-.draft{display:none}
+.panel[hidden]{display:none}
+.panel ol{margin:10px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:6px;color:var(--ink)}
+.priv{background:var(--accent);color:#0c1500;border-radius:18px;padding:16px 20px;font-size:14.5px}
+.foot{font-size:13.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px}
+.foot a,.priv a{color:inherit}
+@media (max-width:520px){.step{grid-template-columns:30px minmax(0,1fr);padding:16px}.step .n{font-size:26px}}
 </style>
-
 </head>
 <body>
 <div class="wrap">
-  <div>
-        <p class="brand"><span style="color:var(--accent)">Z</span>IMPLES NUMBREZ</p>
-  </div>
-
-  <header class="hero">
-    <div class="lead">
-      <h1>Tus <em class="a">números</em> son <em class="b">tuyos</em> y los anotás de manera <em class="c">simple</em>.</h1>
-      <p class="sub">Una planilla de Google que se llena desde una app en tu celular, en tres toques. Sin categorías obligatorias, sin fórmulas que tocar y con todas tus monedas juntas.</p>
-      <div class="btns">
-        <a class="btn p" href="#instalar">Ver cómo se instala</a>
-        <a class="btn s" href="#paso-2">Ya tengo mi planilla</a>
-      </div>
-      <div class="trust"><span>Tus datos quedan en tu cuenta de Google</span><span>Sin servidores en el medio</span><span>Podés quitar el acceso cuando quieras</span></div>
-    </div>
-    <div class="phone" id="demo" aria-label="Demostración de la app">
-      <div class="ph-top"><span><b style="color:var(--accent)">Z</b>IMPLES NUMBREZ</span><span>NOVIEMBRE</span></div>
-      <div class="dscreen" id="dscreen"></div>
-      <div class="ptabs" role="tablist">
-        <button role="tab" data-t="a" aria-selected="true">ANOTAR</button>
-        <button role="tab" data-t="m" aria-selected="false">MI MES</button>
-        <button role="tab" data-t="n" aria-selected="false">ANÁLISIS</button>
-      </div>
-      <p class="dnote">Probala: es una demostración con datos de ejemplo. Nada de lo que escribas acá se guarda.</p>
-    </div>
+  <p class="brand"><span>Z</span>IMPLES NUMBREZ</p>
+  <header>
+    <h1>Gracias por tu compra. <em>Empezá</em> en 10 minutos.</h1>
+    <p class="sub" style="margin-top:12px">Son tres pasos: tu copia de la planilla, la app y el ícono en tu pantalla de inicio. Todo queda en tu cuenta de Google.</p>
   </header>
 
-  <section class="sec">
-    <p class="kick">Qué recibís</p>
-    <h2>Una planilla, una app y tus datos en tus manos</h2>
-    <div class="three">
-      <div class="c1"><h3>La planilla</h3><p>Doce meses en una sola tabla. Arriba, un panel que suma cada moneda, te dice cuánto ahorrás y lo muestra en gráficos.</p></div>
-      <div class="c2"><h3>La app</h3><p>Elegís si fue una salida o un ingreso, escribís el monto y, si querés, contás qué pasó. La fecha se pone sola.</p></div>
-      <div class="c3"><h3>Tus datos</h3><p>Todo queda en tu planilla, dentro de tu cuenta de Google. No hay otro lugar donde se guarde, ni lo ve quien te la vendió.</p></div>
+  <div class="step">
+    <span class="n">1</span>
+    <h2>Hacé tu copia de la planilla</h2>
+    <p>Tocá el botón. Google te pregunta si querés hacer una copia: poné el nombre que quieras y confirmá. Queda en tu Drive y es solo tuya.</p>
+    <div>
+      <a class="btn" id="copia" href="https://docs.google.com/spreadsheets/d/1T7ZOiw6gbH2RNXbuQsfY6k017RCGqKGaMwC8wbGDfHg/copy" target="_blank" rel="noopener">Hacer mi copia de la planilla</a>
+      <p class="ok">Listo cuando ves las pestañas EMPEZAR AQUÍ, REGISTRO y AJUSTES.</p>
     </div>
-  </section>
+  </div>
 
-  <section class="sec">
-    <p class="kick">Lo que hace la app</p>
-    <div class="uses">
-      <div><b>ANOTAR</b><p>Salida o ingreso, moneda, monto y un detalle libre. Sin categorías.</p></div>
-      <div><b>CAMBIO</b><p>Cambiaste dólares por pesos: lo anotás en una sola pantalla.</p></div>
-      <div><b>MI MES</b><p>Tus últimos movimientos. Tocás uno para corregirlo o borrarlo.</p></div>
-      <div><b>ANÁLISIS</b><p>Tasa de ahorro, gasto por día, días seguidos anotando y el peso de cada moneda.</p></div>
+  <div class="step">
+    <span class="n">2</span>
+    <h2>Abrí la app e iniciá sesión</h2>
+    <p>Abrila desde tu celular. Iniciá sesión con la misma cuenta de Google donde hiciste la copia y elegí tu planilla de la lista. Google te va a pedir permiso solo para los archivos que elijas con la app.</p>
+    <div>
+      <a class="btn" href="../app/">Abrir la app</a>
+      <p class="ok">Listo cuando ves el mes de hoy y el teclado de números.</p>
     </div>
-  </section>
+  </div>
 
-    <section class="sec" id="privacidad">
-    <p class="kick">Tu privacidad, en simple</p>
-    <h2>Tus números viajan de tu celular a tu planilla. Nada más.</h2>
-    <div class="priv">
-      <div class="diagram">
-        <svg viewBox="0 0 640 150" role="img" aria-label="Tu celular se conecta directo con tu planilla en tu cuenta de Google, sin nadie en el medio">
-          <rect x="14" y="30" width="170" height="80" rx="16" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--ink)"/>
-          <text x="99" y="66" text-anchor="middle" font-size="16" font-weight="700">Tu celular</text>
-          <text x="99" y="88" text-anchor="middle" class="t2">la app</text>
-          <line x1="190" y1="70" x2="446" y2="70" stroke="currentColor" stroke-width="2" stroke-dasharray="6 6" style="color:var(--usd)"/>
-          <polygon points="446,63 458,70 446,77" style="fill:var(--usd)"/>
-          <polygon points="190,63 178,70 190,77" style="fill:var(--usd)"/>
-          <text x="318" y="56" text-anchor="middle" class="t2">directo</text>
-          <text x="318" y="96" text-anchor="middle" class="t2">sin nadie en el medio</text>
-          <rect x="456" y="30" width="170" height="80" rx="16" style="fill:var(--in-bg)" stroke="currentColor" stroke-width="2"/>
-          <text x="541" y="66" text-anchor="middle" font-size="16" font-weight="700" style="fill:var(--in-fg)">Tu planilla</text>
-          <text x="541" y="88" text-anchor="middle" font-size="13" style="fill:var(--in-fg)">en tu cuenta de Google</text>
-          <text x="320" y="138" text-anchor="middle" class="t2">No hay una base de datos nuestra. Lo que anotás vive solo en tu Drive.</text>
-        </svg>
-      </div>
-      <div class="claims">
-        <div><b>Solo vos lo ves</b><p>Quien te vendió la planilla no puede abrirla ni ver lo que anotás.</p></div>
-        <div><b>Un permiso acotado</b><p>La app solo toca el archivo que elegís. No ve el resto de tu Drive ni tu correo.</p></div>
-        <div><b>Vos mandás</b><p>Podés quitarle el acceso cuando quieras. Tu planilla y tus datos siguen siendo tuyos.</p></div>
-      </div>
-      <p class="quote">Cuando inicies sesión, Google te va a mostrar esta frase: <q>Ver, editar, crear y borrar solo los archivos específicos de Google Drive que uses con esta app.</q> Es exactamente lo que necesita para escribir en tu planilla, y nada más.</p>
+  <div class="step">
+    <span class="n">3</span>
+    <h2>Dejala en tu pantalla de inicio</h2>
+    <div class="tabs" role="tablist" aria-label="Tu celular">
+      <button class="tab" role="tab" id="t-ios" aria-controls="p-ios" aria-selected="true">iPhone</button>
+      <button class="tab" role="tab" id="t-and" aria-controls="p-and" aria-selected="false">Android</button>
     </div>
-  </section>
-
-  <section class="sec" id="instalar">
-    <p class="kick">Instalación · una sola vez</p>
-    <h2>Tres pasos, diez minutos</h2>
-    <ol class="steps">
-      <li class="step" id="paso-1">
-        <h3>Copiá tu planilla <small>2 min</small></h3>
-        <ol>
-          <li>Abrí el enlace que viene en el PDF de tu compra.</li>
-          <li>Tocá <b>Hacer una copia</b> y ponele el nombre que quieras.</li>
-          <li>Se abre <b>tu</b> planilla, con tres pestañas: EMPEZAR AQUÍ, REGISTRO y AJUSTES.</li>
-        </ol>
-        <p class="done">Listo cuando ves las tres pestañas.</p>
-      </li>
-      <li class="step" id="paso-2">
-        <h3>Abrí la app e iniciá sesión <small>3 min</small></h3>
-        <ol>
-          <li>Tocá el botón <b>Abrir la app</b> de esta página.</li>
-          <li>Elegí <b>Iniciar sesión con Google</b>, con la misma cuenta donde copiaste la planilla.</li>
-          <li>Google te muestra una pantalla de permisos (la explicamos arriba). Dice que la app solo toca <b>los archivos que elijas</b>, no todo tu Drive. Aceptá.</li>
-          <li>Elegí tu planilla de la lista.</li>
-        </ol>
-        <a class="btn p" href="app/">Abrir la app</a>
-        <p class="done">Listo cuando ves el mes de hoy y el teclado de números.</p>
-      </li>
-      <li class="step" id="paso-3">
-        <h3>Dejala en tu pantalla de inicio <small>1 min</small></h3>
-        <div class="tabs" role="tablist" aria-label="Tu celular">
-          <button class="tab" role="tab" id="t-ios" aria-controls="p-ios" aria-selected="true">iPhone</button>
-          <button class="tab" role="tab" id="t-and" aria-controls="p-and" aria-selected="false">Android</button>
-        </div>
-        <div class="panel" role="tabpanel" id="p-ios" aria-labelledby="t-ios">
-          <ol>
-            <li>Abrí la app en <b>Safari</b>.</li>
-            <li>Tocá el botón <b>Compartir</b> (el cuadrado con la flecha hacia arriba).</li>
-            <li>Elegí <b>Agregar a pantalla de inicio</b>.</li>
-            <li>Tocá <b>Agregar</b>.</li>
-          </ol>
-        </div>
-        <div class="panel" role="tabpanel" id="p-and" aria-labelledby="t-and" hidden>
-          <ol>
-            <li>Abrí la app en <b>Chrome</b>.</li>
-            <li>Tocá el menú <b>⋮</b> de arriba a la derecha.</li>
-            <li>Elegí <b>Instalar app</b> o <b>Agregar a pantalla principal</b>.</li>
-            <li>Confirmá.</li>
-          </ol>
-        </div>
-        <p class="done">Listo cuando el ícono de ZIMPLES NUMBREZ está en tu pantalla de inicio.</p>
-      </li>
-    </ol>
-    <div class="test">
-      <h3>Probala en un minuto</h3>
-      <p>Anotá una salida de prueba, por ejemplo 1 USD con el detalle «prueba». Abrí la pestaña REGISTRO de tu planilla: la fila tiene que estar en el mes de hoy, con la fecha puesta sola. Después tocá <b>Deshacer</b> y la fila se vacía.</p>
+    <div class="panel" role="tabpanel" id="p-ios" aria-labelledby="t-ios">
+      <ol>
+        <li>Abrí la app en <b>Safari</b>.</li>
+        <li>Tocá <b>Compartir</b> (el cuadrado con la flecha hacia arriba).</li>
+        <li>Elegí <b>Agregar a pantalla de inicio</b> y tocá <b>Agregar</b>.</li>
+      </ol>
     </div>
-  </section>
-
-  <section class="sec">
-    <p class="kick">Preguntas frecuentes</p>
-    <div class="faq">
-      <details><summary>¿Quién puede ver mis datos?</summary><p>Solo vos. La app lee y escribe únicamente la planilla que elegiste, que está en tu cuenta de Google. No hay un servidor aparte que guarde tus movimientos.</p></details>
-      <details><summary>¿Cómo le quito el acceso a la app?</summary><p>Entrá a <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">myaccount.google.com/permissions</a>, elegí ZIMPLES NUMBREZ y tocá «Quitar acceso». La app deja de poder escribir en tu planilla y todo lo anotado sigue en tu Drive.</p></details>
-      <details><summary>¿Qué permiso me pide Google?</summary><p>Acceso al archivo que elijas, y nada más. No ve el resto de tu Drive.</p></details>
-      <details><summary>¿Puedo usar otras monedas?</summary><p>Sí, hasta siete. Empezás con USD y ARS y sumás las demás escribiéndolas en la pestaña AJUSTES. Aparecen solas en el panel y en la app.</p></details>
-      <details><summary>¿Y si cambio de celular?</summary><p>Instalás la app de nuevo, iniciás sesión con la misma cuenta y elegís la misma planilla. Tus movimientos están todos ahí.</p></details>
-      <details><summary>¿Funciona sin internet?</summary><p>Todavía no. Necesita conexión para guardar cada movimiento.</p></details>
-      <details><summary>¿Qué pasa si algo no sale?</summary><p>Escribinos con una captura de pantalla y te ayudamos. [Medio de contacto por definir]</p></details>
+    <div class="panel" role="tabpanel" id="p-and" aria-labelledby="t-and" hidden>
+      <ol>
+        <li>Abrí la app en <b>Chrome</b>.</li>
+        <li>Tocá el menú <b>⋮</b> de arriba a la derecha.</li>
+        <li>Elegí <b>Instalar app</b> y confirmá.</li>
+      </ol>
     </div>
-  </section>
+    <p class="ok">Listo cuando el ícono con la Z está en tu pantalla de inicio.</p>
+  </div>
 
-  <footer>
-    <p class="brand" style="padding:0"><span style="color:var(--accent)">Z</span>IMPLES NUMBREZ</p>
-    <p class="small">Hecha para quien empieza a llevar sus números. · <a href="privacidad.html" style="color:inherit">Privacidad</a></p>
-  </footer>
+  <div class="priv"><b>Tus datos son tuyos.</b> Todo lo que anotás queda en tu planilla, dentro de tu cuenta de Google. No hay otro lugar donde se guarde, y quien te la vendió no lo ve. Podés quitarle el acceso a la app cuando quieras desde <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">myaccount.google.com/permissions</a>.</div>
+
+  <p class="foot">¿Querés ver cómo funciona antes de instalar? <a href="../">Mirá la página principal</a> · <a href="../privacidad.html">Privacidad</a>.<br>Si algo no sale, escribinos por mensaje de Etsy con una captura de pantalla y te ayudamos.</p>
 </div>
-
 <script>
 (function(){
-  var tabs=document.querySelectorAll('.tab');
-  function sel(t){
-    tabs.forEach(function(b){
-      var on=b===t; b.setAttribute('aria-selected',on);
-      document.getElementById(b.getAttribute('aria-controls')).hidden=!on;
-    });
-  }
-  tabs.forEach(function(b){
-    b.addEventListener('click',function(){sel(b)});
-    b.addEventListener('keydown',function(e){
-      if(e.key==='ArrowRight'||e.key==='ArrowLeft'){var o=tabs[0]===b?tabs[1]:tabs[0];o.focus();sel(o)}
-    });
-  });
-  sel(tabs[0]);
-})();
-
-(function(){
-  var COL={USD:'--usd',ARS:'--ars',EUR:'--eur'}, SYM={USD:'$',ARS:'$',EUR:'€'};
-  var d=new Date(), hoy=String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0');
-  var st={t:'a',tipo:'o',cur:'ARS',txt:'',movs:[{d:'11/02',det:'Almuerzo',cur:'ARS',m:-8500},{d:'11/01',det:'Pago de un trabajo',cur:'USD',m:120},{d:'10/31',det:'Café con una amiga',cur:'ARS',m:-3200}],aviso:''};
-  var scr=document.getElementById('dscreen');
-  function fmt(n){return n.toLocaleString('es-AR',{maximumFractionDigits:2})}
-  function esc(x){return String(x).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]})}
-  function vA(){
-    var n=parseFloat((st.txt||'0').replace(',','.'))||0;
-    var ks=['1','2','3','4','5','6','7','8','9',',','0','⌫'];
-    return (st.aviso?'<div class="dtoast" role="status">'+st.aviso+'</div>':'')+
-    '<div class="seg"><button class="o" data-tp="o" aria-pressed="'+(st.tipo==='o')+'">SALIDA</button><button class="i" data-tp="i" aria-pressed="'+(st.tipo==='i')+'">INGRESO</button></div>'+
-    '<div class="chips">'+['USD','ARS','EUR'].map(function(c){return '<button data-c="'+c+'" aria-pressed="'+(st.cur===c)+'"><i style="background:var('+COL[c]+')"></i>'+c+' '+SYM[c]+'</button>'}).join('')+'</div>'+
-    '<div class="amt"><small>'+st.cur+' '+SYM[st.cur]+'</small><strong>'+(st.txt||'0')+'</strong></div>'+
-    '<div class="keys">'+ks.map(function(k){return '<button data-k="'+k+'" aria-label="'+(k==='⌫'?'borrar':k)+'">'+k+'</button>'}).join('')+'</div>'+
-    '<button class="go '+(st.tipo==='i'?'i':'')+'" id="dgo"'+(n>0?'':' disabled')+'>GUARDAR '+(st.tipo==='o'?'SALIDA':'INGRESO')+'</button>';
-  }
-  function vM(){
-    var t={USD:0,ARS:0,EUR:0}; st.movs.forEach(function(x){t[x.cur]+=x.m});
-    return '<div class="dtot">'+['USD','ARS','EUR'].map(function(c){return '<div><small style="color:var('+COL[c]+')">'+c+' '+SYM[c]+'</small><b>'+fmt(t[c])+'</b></div>'}).join('')+'</div><ul class="dl">'+
-      st.movs.slice(0,6).map(function(x){return '<li><span class="d">'+x.d+'</span><span>'+(x.det?esc(x.det):'<i>sin detalle</i>')+'</span><span class="m '+(x.m>0?'in':'')+'">'+(x.m<0?'−':'+')+fmt(Math.abs(x.m))+'</span></li>'}).join('')+'</ul>';
-  }
-  function vN(){
-    var bars=[['SEP',1400,1330],['OCT',1550,1260],['NOV',1380,610]], W=270,H=120,L=6,B=18,T=8,iw=W-L*2,ih=H-B-T,mx=1600,g='';
-    bars.forEach(function(b,k){var cx=L+iw*(k+.5)/3, y=function(v){return T+ih-v/mx*ih};
-      g+='<rect x="'+(cx-17)+'" y="'+y(b[1])+'" width="15" height="'+(T+ih-y(b[1]))+'" rx="2" style="fill:var(--ok)"/><rect x="'+(cx+2)+'" y="'+y(b[2])+'" width="15" height="'+(T+ih-y(b[2]))+'" rx="2" style="fill:var(--out-bg)"/><text x="'+cx+'" y="'+(H-4)+'" text-anchor="middle">'+b[0]+'</text>'});
-    return '<div class="dcards"><div><small>Tasa de ahorro</small><b>56%</b></div><div><small>Gasto por día</small><b>$38</b></div><div><small>Días seguidos</small><b>6</b></div></div><p class="dnote" style="text-align:left">Ingresos y salidas, en dólares</p><svg class="dsvg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Ingresos y salidas de tres meses">'+g+'</svg>';
-  }
-  function render(){
-    scr.innerHTML=st.t==='a'?vA():st.t==='m'?vM():vN();
-    document.querySelectorAll('.ptabs button').forEach(function(b){b.setAttribute('aria-selected',b.dataset.t===st.t)});
-    scr.querySelectorAll('[data-tp]').forEach(function(b){b.onclick=function(){st.tipo=b.dataset.tp;render()}});
-    scr.querySelectorAll('[data-c]').forEach(function(b){b.onclick=function(){st.cur=b.dataset.c;render()}});
-    scr.querySelectorAll('[data-k]').forEach(function(b){b.onclick=function(){
-      var k=b.dataset.k,v=st.txt;
-      if(k==='⌫')v=v.slice(0,-1);
-      else if(k===','){if(v.indexOf(',')<0)v=(v||'0')+','}
-      else{var p=v.split(',');if(p[1]!==undefined&&p[1].length>=2)return;if(p[0].length>=7)return;v=v==='0'?k:v+k}
-      st.txt=v;st.aviso='';render();}});
-    var go=document.getElementById('dgo');
-    if(go)go.onclick=function(){
-      var n=parseFloat(st.txt.replace(',','.'));if(!(n>0))return;
-      st.movs.unshift({d:hoy,det:'',cur:st.cur,m:st.tipo==='o'?-n:n});
-      st.aviso='Anotado: '+st.cur+' '+fmt(n)+'. Mirá «Mi mes».';st.txt='';render();};
-  }
-  document.querySelectorAll('.ptabs button').forEach(function(b){b.addEventListener('click',function(){st.t=b.dataset.t;render()})});
-  render();
+  var ios=document.getElementById('t-ios'),and=document.getElementById('t-and'),pi=document.getElementById('p-ios'),pa=document.getElementById('p-and');
+  function sel(a){ios.setAttribute('aria-selected',a==='ios');and.setAttribute('aria-selected',a==='and');pi.hidden=a!=='ios';pa.hidden=a!=='and';}
+  ios.addEventListener('click',function(){sel('ios');});and.addEventListener('click',function(){sel('and');});
+  if(/android/i.test(navigator.userAgent))sel('and');
 })();
 </script>
 </body>
