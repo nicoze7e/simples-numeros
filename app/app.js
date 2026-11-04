@@ -1,4 +1,4 @@
-/* SIMPLES NUMEROS · app (PWA) v1.0
+/* ZIMPLES NUMBREZ · app (PWA)
  * Habla directo con la API de Google Sheets desde el celular, con el permiso drive.file.
  * No hay servidor intermedio. Estructura que asume la planilla:
  *  - REGISTRO: el mes 1 empieza en la fila 19 y cada bloque siguiente 101 filas más abajo (100 renglones por mes).
@@ -8,7 +8,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.1 · 2026-11-04';
+  var VERSION = '1.2 · 2026-11-04';
   var SCOPE = 'https://www.googleapis.com/auth/drive.file';
   var SB = 'https://sheets.googleapis.com/v4/spreadsheets/';
   var BLOQUE = 101, ENTRADAS = 100;
@@ -37,7 +37,7 @@
   })();
 
   var tok = null, exp = 0, tc = null, cb = null;
-  var D = null, A = null, toastT = null;
+  var D = null, A = null, AN = null, toastT = null;
   var st = { vista: 'cargando', tab: 'anotar', tipo: 'SALIDA', cur: '', txt: '', det: '', dar: '', rec: '', curDar: '', curRec: '', act: 'dar', edit: null, busy: false, error: '', msg: '', movs: [], usadas: 0, mes: '', hoy: '', errA: '' };
 
   function $(s) { return document.querySelector(s); }
@@ -114,9 +114,18 @@
     return api(SB + fid() + '?fields=sheets.properties.title').then(function (j) {
       var t = (j.sheets || []).map(function (s) { return s.properties.title; });
       var anio = 'AÑO ' + new Date().getFullYear();
-      if (t.indexOf('REGISTRO') >= 0) { P = PERFILES.simples; P.hoja = 'REGISTRO'; }
-      else if (t.indexOf(anio) >= 0) { P = PERFILES.personal; P.hoja = anio; }
-      else throw new Error('Esta planilla no tiene la pestaña REGISTRO (ni «' + anio + '»). Pestañas que veo: ' + t.join(', '));
+      var actual = new Date().getFullYear(), anios = [], m;
+      if (t.indexOf('REGISTRO') >= 0) {
+        P = PERFILES.simples; P.hoja = 'REGISTRO';
+        /* REGISTRO = año en curso · «REGISTRO 2025» = años anteriores archivados */
+        t.forEach(function (n) { if ((m = /^REGISTRO (\d{4})$/.exec(n))) anios.push({ hoja: n, anio: +m[1] }); });
+        anios.push({ hoja: 'REGISTRO', anio: actual });
+      } else if (t.indexOf(anio) >= 0) {
+        P = PERFILES.personal; P.hoja = anio;
+        t.forEach(function (n) { if ((m = /^AÑO (\d{4})$/.exec(n))) anios.push({ hoja: n, anio: +m[1] }); });
+      } else throw new Error('Esta planilla no tiene la pestaña REGISTRO (ni «' + anio + '»). Pestañas que veo: ' + t.join(', '));
+      anios.sort(function (a, b) { return a.anio - b.anio; });
+      P.anios = anios;
       perfilDe = fid();
     });
   }
@@ -176,7 +185,42 @@
   }
   function jsonPost(url, body) { return api(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); }
 
+  /* Ingresos y salidas por mes (en USD) de una pestaña de año, con la cotización de esa misma pestaña. */
+  function resumenAnio(hoja) {
+    var R = function (r) { return "'" + hoja + "'!" + r; };
+    return Promise.all([
+      api(SB + fid() + '/values:batchGet?ranges=' + enc(R(P.enc)) + '&ranges=' + enc(R(P.tasas)) + '&' + UNF).then(function (j) { return j.valueRanges || []; }),
+      getV(R('C' + P.primera + ':G' + (P.primera + BLOQUE * 12 - 2)))
+    ]).then(function (r) {
+      function fila0(i) { return (r[0][i] && r[0][i].values && r[0][i].values[0]) || []; }
+      var encab = fila0(0), tasas = fila0(1), tasaDe = {}, ing = [], sal = [], i;
+      P.panel.forEach(function (idx) {
+        var n = String(encab[idx] || '').trim(), t = Number(tasas[idx]);
+        if (n && t > 0) tasaDe[n.substring(0, 3).toUpperCase()] = t;
+      });
+      for (i = 0; i <= 12; i++) { ing.push(0); sal.push(0); }
+      var sinTasa = {};
+      for (i = 0; i < r[1].length; i++) {
+        if (i % BLOQUE === ENTRADAS) continue;
+        var f = r[1][i] || [], monto = f[2];
+        if (typeof monto !== 'number') continue;
+        if (/cambio/i.test(String(f[4] === undefined ? '' : f[4]))) continue;
+        var cod = String(f[1] || '').substring(0, 3).toUpperCase(), tasa = tasaDe[cod];
+        if (!tasa) { sinTasa[cod] = true; continue; }
+        var mes = Math.floor(i / BLOQUE) + 1;
+        if (mes > 12) continue;
+        if (String(f[3] || '').indexOf('SALI') === 0) sal[mes] += monto / tasa; else ing[mes] += monto / tasa;
+      }
+      return { ing: ing, sal: sal, sinTasa: Object.keys(sinTasa) };
+    });
+  }
+
   var API = {
+    obtenerAnios: function () {
+      return Promise.all(P.anios.map(function (a) {
+        return resumenAnio(a.hoja).then(function (x) { return { anio: a.anio, hoja: a.hoja, ing: x.ing, sal: x.sal, sinTasa: x.sinTasa }; });
+      })).then(function (lista) { return { lista: lista, mesActual: mesNum(), anioActual: new Date().getFullYear() }; });
+    },
     obtenerDatos: function () {
       var k = mesNum(), ini = inicioBloque(k);
       return Promise.all([monedas(), getV(H('C' + ini + ':G' + (ini + ENTRADAS - 1)), '&dateTimeRenderOption=FORMATTED_STRING')]).then(function (r) {
@@ -355,6 +399,28 @@
     });
     return '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Tasa de ahorro por mes">' + g + '</svg>';
   }
+  function sumaMeses(a, hasta) { var s = 0; for (var m = 1; m <= hasta; m++) s += a[m]; return s; }
+  function pct(nuevo, viejo) { return viejo > 0 ? Math.round((nuevo / viejo - 1) * 100) : null; }
+  function seccionAnios() {
+    var t = '<div class="sec"><h2>Año contra año</h2>';
+    if (st.errN) return t + '<p>No pude leer los otros años.<br>' + esc(st.errN) + '</p></div>';
+    if (!AN) return t + '<p>Calculando…</p></div>';
+    var L = AN.lista;
+    if (L.length < 2) return t + '<p>Cuando tengas dos años en la planilla, los comparo acá. Para el año que viene: duplicá la pestaña de este año y dale el nombre del año nuevo; la vieja queda como historia.</p></div>';
+    var data = L.map(function (y) { return { m: String(y.anio), i: redondear(sumaMeses(y.ing, 12)), o: redondear(sumaMeses(y.sal, 12)) }; });
+    var ult = L[L.length - 1], ant = L[L.length - 2];
+    var hasta = ult.anio === AN.anioActual ? AN.mesActual : 12;
+    var gI = sumaMeses(ult.ing, hasta), gO = sumaMeses(ult.sal, hasta), aI = sumaMeses(ant.ing, hasta), aO = sumaMeses(ant.sal, hasta);
+    var h = t + '<p>Totales de cada año, en dólares.</p>' + chartIO(data) + '<div class="leg"><span><i style="background:var(--ok)"></i>ingresos</span><span><i style="background:var(--out-bg)"></i>salidas</span></div>';
+    var pO = pct(gO, aO), pI = pct(gI, aI);
+    var periodo = hasta === 12 ? 'el año completo' : 'enero a ' + MESES[hasta - 1].toLowerCase();
+    var txt = '';
+    if (pO !== null) txt += 'En ' + periodo + ', ' + ult.anio + ' tuvo ' + Math.abs(pO) + '% ' + (pO <= 0 ? 'menos' : 'más') + ' de salidas que ' + ant.anio + '.';
+    if (pI !== null) txt += ' Los ingresos fueron ' + Math.abs(pI) + '% ' + (pI <= 0 ? 'menores' : 'mayores') + '.';
+    if (txt) h += '<div class="insight">' + txt + ' (mismo período en los dos años).</div>';
+    h += '<div class="hint">Cada año se convierte a dólares con la cotización de su propia pestaña.</div>';
+    return h + '</div>';
+  }
   function vAnalisis() {
     if (st.errA) return '<div class="vacio">No pude calcular el análisis.<br>' + esc(st.errA) + '<br><button type="button" class="ghost" id="reA">REINTENTAR</button></div>';
     if (!A) return '<div class="vacio">Calculando tu análisis…</div>';
@@ -371,7 +437,7 @@
       h += '<div class="sec"><h2>Dónde está tu plata</h2><p>Peso de cada moneda, en dólares.</p><div class="stack">' + A.pesos.map(function (p) { return '<i style="width:' + (p.usd / tot * 100) + '%;background:var(' + colV(p.nombre) + ')"></i>'; }).join('') + '</div><div class="leg">' + A.pesos.map(function (p) { return '<span><i style="background:var(' + colV(p.nombre) + ')"></i>' + esc(p.c) + ' ' + Math.round(p.usd / tot * 100) + '% · ' + usdF(p.usd) + '</span>'; }).join('') + '</div></div>';
     }
     if (A.sinTasa && A.sinTasa.length) h += '<div class="hint">Falta la cotización de ' + esc(A.sinTasa.join(', ')) + ': esos movimientos no entran en el análisis. Revisá la hoja REGISTRO.</div>';
-    return h + '<div class="hint">Más filtros y gráficos: abrí la hoja.</div>';
+    return h + seccionAnios() + '<div class="hint">Más filtros y gráficos: abrí la hoja.</div>';
   }
   function vEditar() {
     var e = st.edit;
@@ -389,18 +455,18 @@
       '<label class="lab" for="ccid">ID de cliente</label><input class="det" id="ccid" autocomplete="off">' +
       '<label class="lab" for="ckey">Clave de API</label><input class="det" id="ckey" autocomplete="off">' +
       '<label class="lab" for="capp">Número de proyecto</label><input class="det" id="capp" inputmode="numeric" autocomplete="off">' +
-      '<button type="button" id="bcfg" class="save out">GUARDAR</button></div>';
+      '<button type="button" id="bcfg" class="save in">GUARDAR</button></div>';
   }
   function vLogin() {
     return '<div class="bienvenida"><h2>Tus números son tuyos</h2><p>Iniciá sesión con Google para anotar en tu propia planilla. La app solo toca el archivo que elijas.</p>' +
       (st.msg ? '<p class="aviso">' + esc(st.msg) + '</p>' : '') +
-      '<button type="button" id="btnLogin" class="save out">INICIAR SESIÓN CON GOOGLE</button>' +
+      '<button type="button" id="btnLogin" class="save in">INICIAR SESIÓN CON GOOGLE</button>' +
       '<p class="hint">Google te va a pedir permiso para ver, editar, crear y borrar solo los archivos específicos de Drive que uses con esta app.</p></div>';
   }
   function vPlanilla() {
-    return '<div class="bienvenida"><h2>Elegí tu planilla</h2><p>Buscá la copia de SIMPLES NUMEROS que hiciste en tu Drive y tocá «Seleccionar».</p>' +
+    return '<div class="bienvenida"><h2>Elegí tu planilla</h2><p>Buscá tu planilla en tu Drive y tocá «Seleccionar».</p>' +
       (st.msg ? '<p class="aviso">' + esc(st.msg) + '</p>' : '') +
-      '<button type="button" id="btnPick" class="save out">ELEGIR MI PLANILLA</button></div>';
+      '<button type="button" id="btnPick" class="save in">ELEGIR MI PLANILLA</button></div>';
   }
   function vAjustes() {
     var id = fid();
@@ -409,7 +475,7 @@
       '<button type="button" id="aCambiar" class="ghost">CAMBIAR DE PLANILLA</button>' +
       '<button type="button" id="aSalir" class="ghost">CERRAR SESIÓN EN ESTE CELULAR</button>' +
       '<p class="hint">Para quitarle el acceso a la app desde Google: myaccount.google.com/permissions</p>' +
-      '<button type="button" id="aVolver" class="save out">VOLVER</button>' +
+      '<button type="button" id="aVolver" class="save in">VOLVER</button>' +
       '<p class="hint">Versión ' + VERSION + '</p></div>';
   }
 
@@ -503,6 +569,8 @@
   function cargarAnalisis() {
     st.errA = ''; render();
     srv('obtenerAnalisis', [], function (a) { A = a; render(); }, function (e) { if (e && e.login) { falla(e); return; } st.errA = (e && e.message) || ''; render(); });
+    st.errN = ''; AN = null;
+    srv('obtenerAnios', [], function (a) { AN = a; render(); }, function (e) { if (e && e.login) { falla(e); return; } st.errN = (e && e.message) || 'Error'; render(); });
   }
   function cargar() {
     st.vista = 'cargando'; render();

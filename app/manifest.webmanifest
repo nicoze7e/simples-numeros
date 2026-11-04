@@ -1,12 +1,12 @@
 {
-  "name": "SIMPLES NUMEROS",
-  "short_name": "SIMPLES",
+  "name": "ZIMPLES NUMBREZ",
+  "short_name": "ZIMPLES",
   "description": "Tus números son tuyos y los anotás de manera simple.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#0c0f0c",
-  "theme_color": "#0c0f0c",
+  "background_color": "#0a0a0b",
+  "theme_color": "#0a0a0b",
   "lang": "es",
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },

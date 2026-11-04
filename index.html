@@ -3,28 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>SIMPLES NUMEROS · Tus números son tuyos</title>
+<title>ZIMPLES NUMBREZ · Tus números son tuyos</title>
 <meta name="description" content="Una planilla de Google y una app para el celular. Anotás lo que entra y lo que sale en tu propia cuenta, sin categorías ni fórmulas.">
 <link rel="icon" href="app/icon-192.png">
 <style>*{box-sizing:border-box}body{margin:0}</style>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Figtree:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap">
 <style>
-/* Concepto: la landing habla como la planilla. Mismos números en mono, negro sobre blanco y los colores de cada moneda como único acento. Una columna de lectura con la app a la vista desde el primer pantallazo. */
+/* Concepto: neón nocturno (igual que la app). La landing habla como la planilla. Mismos números en mono, negro sobre blanco y los colores de cada moneda como único acento. Una columna de lectura con la app a la vista desde el primer pantallazo. */
 :root{
-  --bg:#f1f3f1; --surface:#ffffff; --ink:#0c0f0c; --muted:#5f6a5f; --line:#d8ddd8;
-  --out-bg:#3d3d3d; --out-fg:#f2f2f2; --in-bg:#d4edbc; --in-fg:#14501f;
-  --usd:#38761d; --ars:#3d85c6; --eur:#bf9000; --key:#f5f6f5; --ok:#14501f;
-  --f-ui:'Figtree','Segoe UI',system-ui,sans-serif; --f-num:'DM Mono',ui-monospace,Menlo,monospace;
-}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --bg:#0b0e0b; --surface:#151915; --ink:#eef2ee; --muted:#9aa89a; --line:#283028;
-    --out-bg:#4a4a4a; --in-bg:#2d4a1f; --in-fg:#d4edbc; --usd:#7cc35a; --ars:#79b0e6; --eur:#e6bd3a; --key:#1c221c; --ok:#9fdc86; color-scheme:dark;
-  }
-}
-:root[data-theme="dark"]{
-  --bg:#0b0e0b; --surface:#151915; --ink:#eef2ee; --muted:#9aa89a; --line:#283028;
-  --out-bg:#4a4a4a; --in-bg:#2d4a1f; --in-fg:#d4edbc; --usd:#7cc35a; --ars:#79b0e6; --eur:#e6bd3a; --key:#1c221c; --ok:#9fdc86; color-scheme:dark;
+  color-scheme:dark;
+  --bg:#0a0a0b; --surface:#131316; --ink:#f4f4f0; --muted:#8c8c94; --line:#26262b;
+  --accent:#c6ff3d; --accent-glow:rgba(198,255,61,.28); --coral-glow:rgba(255,92,122,.26);
+  --out-bg:#ff5c7a; --out-fg:#1a0a0e; --in-bg:#c6ff3d; --in-fg:#0c1500;
+  --usd:#c6ff3d; --ars:#5cc8ff; --eur:#ffd23f; --key:#1b1b20; --ok:#c6ff3d;
+  --f-ui:'Space Grotesk','Segoe UI',system-ui,sans-serif; --f-num:'DM Mono',ui-monospace,Menlo,monospace;
 }
 body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:16px;line-height:1.55;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 56px}
@@ -155,13 +147,30 @@ h1 em.a{--hl:var(--usd)} h1 em.b{--hl:var(--ars)} h1 em.c{--hl:var(--eur)}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 html{scroll-behavior:smooth}
+
+/* --- Neón nocturno: acentos --- */
+body{background-image:radial-gradient(110% 50% at 50% -8%,rgba(198,255,61,.10),transparent 60%);background-attachment:fixed}
+.brand{font-family:var(--f-ui);font-weight:700;font-size:15px;letter-spacing:.14em}
+.btn.p{background:var(--accent);color:#0c1500;border-color:var(--accent);box-shadow:0 0 28px var(--accent-glow)}
+.btn.s{border-color:var(--line)}
+.btn.s:hover{border-color:var(--accent)}
+.btn:focus-visible,summary:focus-visible,.tab:focus-visible{outline-color:var(--accent)}
+.phone{border-color:var(--line);box-shadow:0 0 60px rgba(198,255,61,.10)}
+.tab[aria-selected="true"]{background:var(--accent);color:#0c1500;border-color:var(--accent)}
+.ptabs button[aria-selected="true"]{color:var(--accent);border-top-color:var(--accent)}
+.chips button[aria-pressed="true"],.chips span.on{border-color:var(--accent)}
+.three>div{border-top-color:var(--accent)}
+.step::before{color:var(--accent)}
+.dtoast{background:var(--accent);color:#0c1500}
+.dsvg text,.diagram text{font-family:var(--f-ui)}
+.draft{display:none}
 </style>
 
 </head>
 <body>
 <div class="wrap">
   <div>
-        <p class="brand">SIMPLES NUMEROS</p>
+        <p class="brand"><span style="color:var(--accent)">Z</span>IMPLES NUMBREZ</p>
   </div>
 
   <header class="hero">
@@ -175,7 +184,7 @@ html{scroll-behavior:smooth}
       <div class="trust"><span>Tus datos quedan en tu cuenta de Google</span><span>Sin servidores en el medio</span><span>Podés quitar el acceso cuando quieras</span></div>
     </div>
     <div class="phone" id="demo" aria-label="Demostración de la app">
-      <div class="ph-top"><span>SIMPLES NUMEROS</span><span>NOVIEMBRE</span></div>
+      <div class="ph-top"><span><b style="color:var(--accent)">Z</b>IMPLES NUMBREZ</span><span>NOVIEMBRE</span></div>
       <div class="dscreen" id="dscreen"></div>
       <div class="ptabs" role="tablist">
         <button role="tab" data-t="a" aria-selected="true">ANOTAR</button>
@@ -281,7 +290,7 @@ html{scroll-behavior:smooth}
             <li>Confirmá.</li>
           </ol>
         </div>
-        <p class="done">Listo cuando el ícono de SIMPLES NUMEROS está en tu pantalla de inicio.</p>
+        <p class="done">Listo cuando el ícono de ZIMPLES NUMBREZ está en tu pantalla de inicio.</p>
       </li>
     </ol>
     <div class="test">
@@ -294,7 +303,7 @@ html{scroll-behavior:smooth}
     <p class="kick">Preguntas frecuentes</p>
     <div class="faq">
       <details><summary>¿Quién puede ver mis datos?</summary><p>Solo vos. La app lee y escribe únicamente la planilla que elegiste, que está en tu cuenta de Google. No hay un servidor aparte que guarde tus movimientos.</p></details>
-      <details><summary>¿Cómo le quito el acceso a la app?</summary><p>Entrá a <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">myaccount.google.com/permissions</a>, elegí SIMPLES NUMEROS y tocá «Quitar acceso». La app deja de poder escribir en tu planilla y todo lo anotado sigue en tu Drive.</p></details>
+      <details><summary>¿Cómo le quito el acceso a la app?</summary><p>Entrá a <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">myaccount.google.com/permissions</a>, elegí ZIMPLES NUMBREZ y tocá «Quitar acceso». La app deja de poder escribir en tu planilla y todo lo anotado sigue en tu Drive.</p></details>
       <details><summary>¿Qué permiso me pide Google?</summary><p>Acceso al archivo que elijas, y nada más. No ve el resto de tu Drive.</p></details>
       <details><summary>¿Puedo usar otras monedas?</summary><p>Sí, hasta siete. Empezás con USD y ARS y sumás las demás escribiéndolas en la pestaña AJUSTES. Aparecen solas en el panel y en la app.</p></details>
       <details><summary>¿Y si cambio de celular?</summary><p>Instalás la app de nuevo, iniciás sesión con la misma cuenta y elegís la misma planilla. Tus movimientos están todos ahí.</p></details>
@@ -304,7 +313,7 @@ html{scroll-behavior:smooth}
   </section>
 
   <footer>
-    <p class="brand" style="padding:0">SIMPLES NUMEROS</p>
+    <p class="brand" style="padding:0"><span style="color:var(--accent)">Z</span>IMPLES NUMBREZ</p>
     <p class="small">Hecha para quien empieza a llevar sus números. · <a href="privacidad.html" style="color:inherit">Privacidad</a></p>
   </footer>
 </div>
