@@ -8,13 +8,22 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.0 · 2026-11-03';
+  var VERSION = '1.1 · 2026-11-04';
   var SCOPE = 'https://www.googleapis.com/auth/drive.file';
   var SB = 'https://sheets.googleapis.com/v4/spreadsheets/';
-  var PRIMERA = 19, BLOQUE = 101, ENTRADAS = 100;
+  var BLOQUE = 101, ENTRADAS = 100;
   var MESES = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
   var COL = ['--usd', '--ars', '--eur', '--c4', '--c5', '--c6', '--c7'];
-  var PANEL = [0, 1, 2, 3, 5, 6, 7];
+  /* Perfiles de planilla. La app detecta cuál es por los nombres de las pestañas (ver prep()).
+   *  simples  = la plantilla del producto (pestaña REGISTRO + AJUSTES).
+   *  personal = la planilla propia del autor (pestaña «AÑO <año>», monedas en su panel). Es una excepción. */
+  var PERFILES = {
+    simples: { id: 'simples', hoja: 'REGISTRO', primera: 19, monedas: 'AJUSTES!B3:B9', enc: 'C2:J2', saldos: 'C1:J1', tasas: 'C12:J12', panel: [0, 1, 2, 3, 5, 6, 7], fechaManual: false },
+    personal: { id: 'personal', hoja: '', primera: 17, monedas: 'C2:F2', enc: 'C2:F2', saldos: 'C1:F1', tasas: 'C10:F10', panel: [0, 1, 2, 3], fechaManual: true }
+  };
+  var P = PERFILES.simples, perfilDe = '';
+  function H(r) { return "'" + P.hoja + "'!" + r; }
+  function HM(r) { return (P.monedas.indexOf('!') < 0) ? H(r) : r; }
   var UNF = 'valueRenderOption=UNFORMATTED_VALUE';
 
   var LS = {
@@ -98,15 +107,42 @@
   function fid() { return LS.get('sn_file') || ''; }
   function U(range, q) { return SB + fid() + '/values/' + enc(range) + (q || ''); }
   function getV(range, extra) { return api(U(range, '?' + UNF + (extra || ''))).then(function (j) { return j.values || []; }); }
-  function inicioBloque(k) { return PRIMERA + BLOQUE * (k - 1); }
+  function inicioBloque(k) { return P.primera + BLOQUE * (k - 1); }
+  /* Detecta qué planilla es (por sus pestañas) y fija el perfil. Una vez por planilla. */
+  function prep() {
+    if (perfilDe === fid() && perfilDe) return Promise.resolve();
+    return api(SB + fid() + '?fields=sheets.properties.title').then(function (j) {
+      var t = (j.sheets || []).map(function (s) { return s.properties.title; });
+      var anio = 'AÑO ' + new Date().getFullYear();
+      if (t.indexOf('REGISTRO') >= 0) { P = PERFILES.simples; P.hoja = 'REGISTRO'; }
+      else if (t.indexOf(anio) >= 0) { P = PERFILES.personal; P.hoja = anio; }
+      else throw new Error('Esta planilla no tiene la pestaña REGISTRO (ni «' + anio + '»). Pestañas que veo: ' + t.join(', '));
+      perfilDe = fid();
+    });
+  }
+  /* Si la columna de fecha de esa fila está vacía (sin fórmula), escribe la fecha de hoy. Solo en planillas con fecha manual. */
+  function fechaSiVacia(filas) {
+    if (!P.fechaManual) return Promise.resolve();
+    var q = filas.map(function (f) { return 'ranges=' + enc(H('C' + f)); }).join('&');
+    return api(SB + fid() + '/values:batchGet?' + q + '&valueRenderOption=FORMULA').then(function (j) {
+      var data = [];
+      (j.valueRanges || []).forEach(function (vr, i) {
+        var v = vr.values && vr.values[0] && vr.values[0][0];
+        if (v === undefined || v === '') data.push({ range: H('C' + filas[i]), values: [[serial(new Date())]] });
+      });
+      if (!data.length) return;
+      return jsonPost(SB + fid() + '/values:batchUpdate', { valueInputOption: 'RAW', data: data });
+    });
+  }
   function mesNum() { return new Date().getMonth() + 1; }
   function hoyTxt() { var d = new Date(); return String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getDate()).padStart(2, '0'); }
   function serial(d) { return Math.floor((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(1899, 11, 30)) / 86400000); }
   function redondear(n) { return Math.round(n * 100) / 100; }
 
   function monedas() {
-    return getV('AJUSTES!B3:B9').then(function (v) {
+    return getV(HM(P.monedas)).then(function (v) {
       var out = [];
+      if (v.length === 1 && v[0].length > 1) v = v[0].map(function (x) { return [x]; });
       for (var i = 0; i < 7; i++) {
         var n = (v[i] && v[i][0] !== undefined) ? String(v[i][0]).trim() : '';
         if (n) out.push({ nombre: n, c: n.substring(0, 3).toUpperCase(), s: n.substring(3).trim() || '$', slot: i });
@@ -116,7 +152,7 @@
   }
   function validar(m) {
     var nombres = D ? D.monedas.map(function (x) { return x.nombre; }) : [];
-    if (nombres.indexOf(m.moneda) < 0) throw new Error('Esa moneda no está en la hoja AJUSTES.');
+    if (nombres.indexOf(m.moneda) < 0) throw new Error('Esa moneda no está en tu planilla.');
     var monto = Number(m.monto);
     if (!isFinite(monto) || monto <= 0) throw new Error('El monto tiene que ser mayor que cero.');
     var t = String(m.tipo || '').toUpperCase();
@@ -125,7 +161,7 @@
   }
   function libres(k, n) {
     var ini = inicioBloque(k);
-    return getV('REGISTRO!E' + ini + ':E' + (ini + ENTRADAS - 1)).then(function (v) {
+    return getV(H('E' + ini + ':E' + (ini + ENTRADAS - 1))).then(function (v) {
       var out = [];
       for (var i = 0; i < ENTRADAS && out.length < n; i++) {
         if (!v[i] || v[i][0] === undefined || v[i][0] === '') out.push(ini + i);
@@ -134,16 +170,16 @@
       return out;
     });
   }
-  function rangoFila(f) { return 'REGISTRO!D' + f + ':G' + f; }
+  function rangoFila(f) { return H('D' + f + ':G' + f); }
   function escribir(f, m) {
-    return api(U(rangoFila(f), '?valueInputOption=RAW'), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ values: [[m.moneda, m.monto, m.tipoHoja, m.detalle]] }) });
+    return api(U(rangoFila(f), '?valueInputOption=RAW'), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ values: [[m.moneda, m.monto, m.tipoHoja, m.detalle]] }) }).then(function () { return fechaSiVacia([f]); });
   }
   function jsonPost(url, body) { return api(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); }
 
   var API = {
     obtenerDatos: function () {
       var k = mesNum(), ini = inicioBloque(k);
-      return Promise.all([monedas(), getV('REGISTRO!C' + ini + ':G' + (ini + ENTRADAS - 1), '&dateTimeRenderOption=FORMATTED_STRING')]).then(function (r) {
+      return Promise.all([monedas(), getV(H('C' + ini + ':G' + (ini + ENTRADAS - 1)), '&dateTimeRenderOption=FORMATTED_STRING')]).then(function (r) {
         var v = r[1], movs = [], usadas = 0;
         for (var i = 0; i < v.length; i++) {
           var row = v[i] || [], monto = row[2];
@@ -172,7 +208,7 @@
             { range: rangoFila(fs[0]), values: [[sale.moneda, sale.monto, sale.tipoHoja, sale.detalle]] },
             { range: rangoFila(fs[1]), values: [[entra.moneda, entra.monto, entra.tipoHoja, entra.detalle]] }
           ]
-        }).then(function () { return { filas: fs }; });
+        }).then(function () { return fechaSiVacia(fs); }).then(function () { return { filas: fs }; });
       });
     },
     corregir: function (fila, mov) {
@@ -180,7 +216,7 @@
       return escribir(fila, m).then(function () { return { fila: fila }; });
     },
     borrar: function (filas, esperado) {
-      var q = filas.map(function (f) { return 'ranges=' + enc('REGISTRO!E' + f); }).join('&');
+      var q = filas.map(function (f) { return 'ranges=' + enc(H('E' + f)); }).join('&');
       return api(SB + fid() + '/values:batchGet?' + q + '&' + UNF).then(function (j) {
         (j.valueRanges || []).forEach(function (vr, i) {
           var v = vr.values && vr.values[0] && vr.values[0][0];
@@ -192,12 +228,12 @@
     obtenerAnalisis: function () {
       var k = mesNum();
       return Promise.all([
-        api(SB + fid() + '/values:batchGet?ranges=' + enc('REGISTRO!C2:J2') + '&ranges=' + enc('REGISTRO!C1:J1') + '&ranges=' + enc('REGISTRO!C12:J12') + '&' + UNF).then(function (j) { return j.valueRanges || []; }),
-        getV('REGISTRO!C' + PRIMERA + ':G' + (PRIMERA + BLOQUE * 12 - 2))
+        api(SB + fid() + '/values:batchGet?ranges=' + enc(H(P.enc)) + '&ranges=' + enc(H(P.saldos)) + '&ranges=' + enc(H(P.tasas)) + '&' + UNF).then(function (j) { return j.valueRanges || []; }),
+        getV(H('C' + P.primera + ':G' + (P.primera + BLOQUE * 12 - 2)))
       ]).then(function (r) {
         function fila0(i) { return (r[0][i] && r[0][i].values && r[0][i].values[0]) || []; }
         var encab = fila0(0), saldos = fila0(1), tasas = fila0(2), tasaDe = {};
-        PANEL.forEach(function (idx) {
+        P.panel.forEach(function (idx) {
           var n = String(encab[idx] || '').trim(), t = Number(tasas[idx]);
           if (n && t > 0) tasaDe[n.substring(0, 3).toUpperCase()] = t;
         });
@@ -221,7 +257,7 @@
         var promPrevio = previos.length ? previos.reduce(function (a, x) { return a + x.o; }, 0) / previos.length / 30 : null;
         var promDia = sal[k] / dia, actual = meses[meses.length - 1];
         var pesos = [];
-        PANEL.forEach(function (idx) {
+        P.panel.forEach(function (idx) {
           var n = String(encab[idx] || '').trim(), cod = n.substring(0, 3).toUpperCase(), s = Number(saldos[idx]);
           if (n && s > 0 && tasaDe[cod]) pesos.push({ nombre: n, c: cod, usd: redondear(s / tasaDe[cod]) });
         });
@@ -231,6 +267,11 @@
       });
     }
   };
+  /* Cada llamada espera primero a saber qué planilla es (prep) */
+  Object.keys(API).forEach(function (k) {
+    var orig = API[k];
+    API[k] = function () { var a = arguments; return prep().then(function () { return orig.apply(null, a); }); };
+  });
   function srv(fn, args, ok, fail) {
     var p;
     try { p = API[fn].apply(null, args); } catch (e) { p = Promise.reject(e); }
