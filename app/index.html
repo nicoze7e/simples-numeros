@@ -148,6 +148,19 @@ body{background-image:radial-gradient(120% 60% at 50% -10%,rgba(198,255,61,.09),
 button:focus-visible,input:focus-visible,li:focus-visible{outline-color:var(--accent)}
 .list .m.i{color:var(--accent)}
 .list .m.o{color:var(--out-bg)}
+
+/* --- Márgenes y alto (v1.3): respiro arriba y abajo, y todo el alto del celular sin scroll de más --- */
+body{padding-top:calc(env(safe-area-inset-top,0px) + 22px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 22px)}
+.app{min-height:calc(100vh - 44px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
+.app{min-height:calc(100dvh - 44px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
+.top{padding-top:16px}
+.tabs{padding-bottom:0}
+.screen{gap:clamp(8px,1.5dvh,12px)}
+.seg button{height:clamp(40px,5.6dvh,46px)}
+.amount{min-height:clamp(52px,8dvh,78px);padding-top:6px}
+.amount .num{font-size:clamp(38px,6.4dvh,52px)}
+.pad button{height:clamp(44px,6.6dvh,56px)}
+.save{height:clamp(48px,6.8dvh,58px)}
 </style>
 </head>
 <body>

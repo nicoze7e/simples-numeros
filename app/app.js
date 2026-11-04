@@ -8,7 +8,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.2 · 2026-11-04';
+  var VERSION = '1.3 · 2026-11-04';
   var SCOPE = 'https://www.googleapis.com/auth/drive.file';
   var SB = 'https://sheets.googleapis.com/v4/spreadsheets/';
   var BLOQUE = 101, ENTRADAS = 100;
