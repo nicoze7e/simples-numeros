@@ -161,14 +161,25 @@ body{padding-top:calc(env(safe-area-inset-top,0px) + 22px);padding-bottom:calc(e
 .amount .num{font-size:clamp(38px,6.4dvh,52px)}
 .pad button{height:clamp(44px,6.6dvh,56px)}
 .save{height:clamp(48px,6.8dvh,58px)}
+
+/* --- v1.4: franja de avisos arriba y colchón abajo --- */
+body{padding-top:calc(env(safe-area-inset-top,0px) + 14px)}
+.avisos{min-height:54px;display:flex;align-items:flex-end}
+.avisos:empty::before{content:"";display:block}
+.avisos .toast{position:static;margin:0;width:100%}
+.avisos .toast.err{background:var(--out-bg);color:var(--out-fg)}
+.avisos .toast.err button{color:var(--out-fg)}
+.app,.app{min-height:calc(100vh - 132px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
+.app{min-height:calc(100dvh - 132px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
+.page{padding-bottom:30vh;padding-bottom:30dvh}
 </style>
 </head>
 <body>
 <div class="page">
+  <div id="toastHost" class="avisos" aria-live="polite"></div>
   <div class="app" id="app">
     <div class="top"><span class="brand"><b>Z</b>IMPLES NUMBREZ</span><span class="mes" id="mesTop"></span><button id="gear" type="button" aria-label="Ajustes" hidden>&#9881;&#xFE0E;</button></div>
     <div class="screen" id="screen"></div>
-    <div id="toastHost"></div>
     <div class="tabs" role="tablist">
       <button role="tab" data-tab="anotar" aria-selected="true">ANOTAR</button>
       <button role="tab" data-tab="cambio" aria-selected="false">CAMBIO</button>

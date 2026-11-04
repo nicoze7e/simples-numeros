@@ -8,7 +8,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.3 · 2026-11-04';
+  var VERSION = '1.4 · 2026-11-04';
   var SCOPE = 'https://www.googleapis.com/auth/drive.file';
   var SB = 'https://sheets.googleapis.com/v4/spreadsheets/';
   var BLOQUE = 101, ENTRADAS = 100;
@@ -325,7 +325,7 @@
     st.busy = false;
     if (e && e.login) { st.vista = 'login'; st.msg = 'Tu sesión venció. Iniciá sesión de nuevo.'; render(); return; }
     render();
-    toastSimple((e && e.message) ? e.message : 'No se pudo completar. Probá de nuevo.');
+    toastSimple((e && e.message) ? e.message : 'No se pudo completar. Probá de nuevo.', true);
   }
 
   /* ---------- Pantallas ---------- */
@@ -505,11 +505,13 @@
     t.appendChild(b); h.appendChild(t);
     toastT = setTimeout(function () { h.innerHTML = ''; }, 7000);
   }
-  function toastSimple(msg) {
+  function toastSimple(msg, err) {
     var h = $('#toastHost'); h.innerHTML = ''; clearTimeout(toastT);
-    h.appendChild(el('div', { 'class': 'toast', role: 'status' }, '<span>' + esc(msg) + '</span>'));
-    toastT = setTimeout(function () { h.innerHTML = ''; }, 4500);
+    h.appendChild(el('div', { 'class': 'toast' + (err ? ' err' : ''), role: 'status' }, '<span>' + esc(msg) + '</span>'));
+    toastT = setTimeout(function () { h.innerHTML = ''; }, err ? 7000 : 4500);
   }
+  window.addEventListener('offline', function () { toastSimple('Sin conexión: lo que anotes no se va a guardar hasta que vuelva.', true); });
+  window.addEventListener('online', function () { toastSimple('Volvió la conexión.'); });
   function fmtIn(n) { return String(n).replace('.', ','); }
   function keepEd() { var m = $('#emonto'), t = $('#edet'); if (m) st.edit.monto = m.value; if (t) st.edit.det = t.value; }
 
