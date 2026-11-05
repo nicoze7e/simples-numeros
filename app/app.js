@@ -8,7 +8,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.5 · 2026-11-05';
+  var VERSION = '1.6 · 2026-11-05';
   var SCOPE = 'https://www.googleapis.com/auth/drive.file';
   var SB = 'https://sheets.googleapis.com/v4/spreadsheets/';
   var BLOQUE = 101, ENTRADAS = 100;
@@ -704,7 +704,7 @@
   /* Deslizar de lado cambia de pestaña (solo con un gesto claramente horizontal y sin teclado abierto). */
   (function () {
     var ORDEN = ['anotar', 'cambio', 'mes', 'analisis'], x0 = 0, y0 = 0, t0 = 0, ok = false;
-    var zona = $('#app');
+    var zona = document;
     zona.addEventListener('touchstart', function (e) {
       var t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; t0 = Date.now();
       ok = e.touches.length === 1 && st.vista === 'app' && !st.edit && !/INPUT|TEXTAREA|SELECT/.test(e.target.tagName);
@@ -712,7 +712,7 @@
     zona.addEventListener('touchend', function (e) {
       if (!ok) return; ok = false;
       var t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0;
-      if (Date.now() - t0 > 700 || Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.8) return;
+      if (Date.now() - t0 > 900 || Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.3) return;
       var i = ORDEN.indexOf(st.tab) + (dx < 0 ? 1 : -1);
       if (i < 0 || i >= ORDEN.length) return;
       var b = document.querySelector('.tabs button[data-tab="' + ORDEN[i] + '"]'); if (b) b.click();

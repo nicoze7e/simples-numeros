@@ -177,6 +177,10 @@ html,body{overflow-x:hidden;overscroll-behavior-x:none;max-width:100%}
 body{touch-action:pan-y}
 .app,.page{max-width:100%;overflow-x:clip}
 input,textarea{touch-action:manipulation}
+/* v1.6 · menú arriba */
+.tabs{border-top:0;border-bottom:1px solid var(--line);padding-bottom:0}
+.tabs button{border-top:0;margin-top:0;border-bottom:2px solid transparent;margin-bottom:-1px;height:48px}
+.tabs button[aria-selected="true"]{border-top-color:transparent;border-bottom-color:var(--accent)}
 </style>
 </head>
 <body>
@@ -184,13 +188,13 @@ input,textarea{touch-action:manipulation}
   <div id="toastHost" class="avisos" aria-live="polite"></div>
   <div class="app" id="app">
     <div class="top"><span class="brand"><b>Z</b>IMPLES NUMBREZ</span><span class="mes" id="mesTop"></span><button id="gear" type="button" aria-label="Ajustes" hidden>&#9881;&#xFE0E;</button></div>
-    <div class="screen" id="screen"></div>
     <div class="tabs" role="tablist">
       <button role="tab" data-tab="anotar" aria-selected="true">ANOTAR</button>
       <button role="tab" data-tab="cambio" aria-selected="false">CAMBIO</button>
       <button role="tab" data-tab="mes" aria-selected="false">MI MES</button>
       <button role="tab" data-tab="analisis" aria-selected="false">ANÁLISIS</button>
     </div>
+    <div class="screen" id="screen"></div>
   </div>
 </div>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
