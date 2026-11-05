@@ -172,6 +172,11 @@ body{padding-top:calc(env(safe-area-inset-top,0px) + 14px)}
 .app,.app{min-height:calc(100vh - 132px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
 .app{min-height:calc(100dvh - 132px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
 .page{padding-bottom:30vh;padding-bottom:30dvh}
+/* v1.5 · pantalla fija: solo vertical */
+html,body{overflow-x:hidden;overscroll-behavior-x:none;max-width:100%}
+body{touch-action:pan-y}
+.app,.page{max-width:100%;overflow-x:clip}
+input,textarea{touch-action:manipulation}
 </style>
 </head>
 <body>

@@ -8,7 +8,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.4 · 2026-11-04';
+  var VERSION = '1.5 · 2026-11-05';
   var SCOPE = 'https://www.googleapis.com/auth/drive.file';
   var SB = 'https://sheets.googleapis.com/v4/spreadsheets/';
   var BLOQUE = 101, ENTRADAS = 100;
@@ -59,10 +59,18 @@
         if (r && r.error) { if (cb) { cb.rej(new Error(r.error)); cb = null; } return; }
         tok = r.access_token; exp = Date.now() + (Number(r.expires_in) || 3600) * 1000 - 60000;
         LS.set('sn_tok', { t: tok, e: exp });
+        if (!LS.get('sn_hint')) guardarHint();
         if (cb) { cb.res(); cb = null; }
       },
       error_callback: function (e) { if (cb) { cb.rej(new Error((e && e.type) || 'cancelado')); cb = null; } }
     });
+  }
+  /* Guarda el mail de la cuenta (solo en este celular) para que Google renueve la sesión sin preguntar cuál cuenta. */
+  function guardarHint() {
+    fetch('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)', { headers: { Authorization: 'Bearer ' + tok } })
+      .then(function (r) { return r.json(); })
+      .then(function (j) { if (j && j.user && j.user.emailAddress) LS.set('sn_hint', j.user.emailAddress); })
+      .catch(function () { /* sin hint: igual funciona */ });
   }
   function esperarGsi(ms) {
     return new Promise(function (res, rej) {
@@ -76,7 +84,8 @@
       initTc();
       if (!tc) { rej(new Error('gsi')); return; }
       cb = { res: res, rej: rej };
-      tc.requestAccessToken({ prompt: prompt });
+      var o = { prompt: prompt }, h = LS.get('sn_hint'); if (h) o.hint = h;
+      tc.requestAccessToken(o);
       setTimeout(function () { if (cb && cb.rej === rej) { cb = null; rej(new Error('tiempo')); } }, prompt === 'none' ? 9000 : 180000);
     });
   }
@@ -86,6 +95,28 @@
       var e = new Error('Tu sesión venció.'); e.login = true; throw e;
     });
   }
+  /* Renueva el permiso de Google en silencio antes de que venza (dura 1 hora). Si Google no lo permite, avisa con un toque. */
+  var renov = false, ultimoFallo = 0;
+  function renovarSilencio() {
+    if (renov || !cfg.clientId || !fid()) return;
+    if (tok && exp - Date.now() > 600000) return;
+    if (Date.now() - ultimoFallo < 120000) return;
+    renov = true;
+    esperarGsi(4000).then(function () { return pedirToken('none'); }).then(function () { ultimoFallo = 0; })
+      .catch(function () { ultimoFallo = Date.now(); if (st.vista === 'app' && !vivo()) avisoSesion(); })
+      .then(function () { renov = false; });
+  }
+  function avisoSesion() {
+    var h = $('#toastHost'); if (!h) return; h.innerHTML = ''; clearTimeout(toastT);
+    var t = el('div', { 'class': 'toast err', role: 'status' }, '<span>Tu sesión se pausó.</span>');
+    var b = el('button', { type: 'button' }, 'RENOVAR');
+    b.addEventListener('click', function () {
+      pedirToken('').then(function () { toastSimple('Sesión renovada.'); })
+        .catch(function () { st.vista = 'login'; st.msg = ''; render(); });
+    });
+    t.appendChild(b); h.appendChild(t);
+  }
+  setInterval(renovarSilencio, 30000);
   function api(url, opt, reintento) {
     return asegurar().then(function () {
       opt = opt || {};
@@ -323,7 +354,10 @@
   }
   function falla(e) {
     st.busy = false;
-    if (e && e.login) { st.vista = 'login'; st.msg = 'Tu sesión venció. Iniciá sesión de nuevo.'; render(); return; }
+    if (e && e.login) {
+      if (st.vista === 'app' && D) { render(); avisoSesion(); return; }
+      st.vista = 'login'; st.msg = 'Tu sesión venció. Iniciá sesión de nuevo.'; render(); return;
+    }
     render();
     toastSimple((e && e.message) ? e.message : 'No se pudo completar. Probá de nuevo.', true);
   }
@@ -644,7 +678,7 @@
       LS.set('sn_cfg', c); cfg = c; arrancar();
     });
     on('#aCambiar', function () { st.msg = ''; st.vista = vivo() ? 'planilla' : 'login'; render(); });
-    on('#aSalir', function () { tok = null; exp = 0; LS.set('sn_tok', null); st.msg = ''; st.vista = 'login'; render(); });
+    on('#aSalir', function () { tok = null; exp = 0; LS.set('sn_tok', null); LS.set('sn_hint', null); st.msg = ''; st.vista = 'login'; render(); });
     on('#aVolver', function () { st.vista = 'app'; render(); });
     var d = $('#det'); if (d) d.addEventListener('input', function () { st.det = d.value; });
   }
@@ -662,7 +696,28 @@
     if (/^[0-9]$/.test(e.key)) { pad(e.key); } else if (e.key === ',' || e.key === '.') { pad(','); } else if (e.key === 'Backspace') { pad('back'); }
     else if (e.key === 'Enter') { var s = $('#save') || $('#saveC'); if (s && !s.disabled) s.click(); }
   });
-  document.addEventListener('visibilitychange', function () { if (!document.hidden && st.vista === 'app' && st.tab === 'mes') refrescar(); });
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) return;
+    ultimoFallo = 0; renovarSilencio();
+    if (st.vista === 'app' && st.tab === 'mes') refrescar();
+  });
+  /* Deslizar de lado cambia de pestaña (solo con un gesto claramente horizontal y sin teclado abierto). */
+  (function () {
+    var ORDEN = ['anotar', 'cambio', 'mes', 'analisis'], x0 = 0, y0 = 0, t0 = 0, ok = false;
+    var zona = $('#app');
+    zona.addEventListener('touchstart', function (e) {
+      var t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; t0 = Date.now();
+      ok = e.touches.length === 1 && st.vista === 'app' && !st.edit && !/INPUT|TEXTAREA|SELECT/.test(e.target.tagName);
+    }, { passive: true });
+    zona.addEventListener('touchend', function (e) {
+      if (!ok) return; ok = false;
+      var t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0;
+      if (Date.now() - t0 > 700 || Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.8) return;
+      var i = ORDEN.indexOf(st.tab) + (dx < 0 ? 1 : -1);
+      if (i < 0 || i >= ORDEN.length) return;
+      var b = document.querySelector('.tabs button[data-tab="' + ORDEN[i] + '"]'); if (b) b.click();
+    }, { passive: true });
+  })();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () { /* sin service worker */ });
   arrancar();
 })();
