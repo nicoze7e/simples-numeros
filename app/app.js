@@ -8,7 +8,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.6 · 2026-11-05';
+  var VERSION = '1.7 · 2026-11-05';
   var SCOPE = 'https://www.googleapis.com/auth/drive.file';
   var SB = 'https://sheets.googleapis.com/v4/spreadsheets/';
   var BLOQUE = 101, ENTRADAS = 100;
@@ -38,7 +38,7 @@
 
   var tok = null, exp = 0, tc = null, cb = null;
   var D = null, A = null, AN = null, toastT = null;
-  var st = { vista: 'cargando', tab: 'anotar', tipo: 'SALIDA', cur: '', txt: '', det: '', dar: '', rec: '', curDar: '', curRec: '', act: 'dar', edit: null, busy: false, error: '', msg: '', movs: [], usadas: 0, mes: '', hoy: '', errA: '' };
+  var st = { vista: 'cargando', mas: '', tab: 'anotar', tipo: 'SALIDA', cur: '', txt: '', det: '', dar: '', rec: '', curDar: '', curRec: '', act: 'dar', edit: null, busy: false, error: '', msg: '', movs: [], usadas: 0, mes: '', hoy: '', errA: '' };
 
   function $(s) { return document.querySelector(s); }
   function el(t, a, h) { var e = document.createElement(t); for (var k in a) e.setAttribute(k, a[k]); if (h != null) e.innerHTML = h; return e; }
@@ -375,7 +375,19 @@
   }
   function tecla(k, l) { return '<button type="button" data-k="' + k + '" aria-label="' + (l || k) + '">' + (l || k) + '</button>'; }
   function keypad() { return '<div class="pad">' + ['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(function (k) { return tecla(k); }).join('') + tecla(',', ',') + tecla('0') + tecla('back', '⌫') + '</div>'; }
-  function chips(sel, attr) { return '<div class="cur">' + D.monedas.map(function (m) { return '<button type="button" class="chip" ' + attr + '="' + esc(m.nombre) + '" aria-pressed="' + (sel === m.nombre) + '"><i style="background:var(' + COL[m.slot] + ')"></i>' + esc(m.c + ' ' + m.s) + '</button>'; }).join('') + '</div>'; }
+  /* 3 monedas a la vista (la elegida siempre se ve) y «MÁS ▾» para el resto. */
+  function chip(m, sel, attr) { return '<button type="button" class="chip" ' + attr + '="' + esc(m.nombre) + '" aria-pressed="' + (sel === m.nombre) + '"><i style="background:var(' + COL[m.slot] + ')"></i>' + esc(m.c + ' ' + m.s) + '</button>'; }
+  function chips(sel, attr) {
+    var ms = D.monedas, abierto = st.mas === attr;
+    if (ms.length <= 3) return '<div class="cur">' + ms.map(function (m) { return chip(m, sel, attr); }).join('') + '</div>';
+    var vis = ms.slice(0, 3), k = -1;
+    ms.forEach(function (m, x) { if (m.nombre === sel) k = x; });
+    if (k > 2) vis[2] = ms[k];
+    var resto = ms.filter(function (m) { return vis.indexOf(m) < 0; });
+    return '<div class="cur">' + vis.map(function (m) { return chip(m, sel, attr); }).join('') +
+      '<button type="button" class="chip mas" data-mas="' + attr + '" aria-expanded="' + abierto + '">' + (abierto ? 'MENOS ▴' : 'MÁS ▾') + '</button></div>' +
+      (abierto ? '<div class="cur extra">' + resto.map(function (m) { return chip(m, sel, attr); }).join('') + '</div>' : '');
+  }
 
   function vAnotar() {
     var n = parse(st.txt), m = mon(st.cur), lleno = st.usadas >= 100;
@@ -653,9 +665,10 @@
     var on = function (id, fn) { var e = $(id); if (e) e.addEventListener('click', fn); };
     q('[data-k]', function (b) { b.addEventListener('click', function () { pad(b.dataset.k); }); });
     q('[data-tipo]', function (b) { b.addEventListener('click', function () { st.tipo = b.dataset.tipo; render(); }); });
-    q('[data-cur]', function (b) { b.addEventListener('click', function () { st.cur = b.dataset.cur; render(); }); });
-    q('[data-cd]', function (b) { b.addEventListener('click', function (e) { e.stopPropagation(); st.curDar = b.dataset.cd; st.act = 'dar'; render(); }); });
-    q('[data-cr]', function (b) { b.addEventListener('click', function (e) { e.stopPropagation(); st.curRec = b.dataset.cr; st.act = 'rec'; render(); }); });
+    q('[data-mas]', function (b) { b.addEventListener('click', function (e) { e.stopPropagation(); st.mas = st.mas === b.dataset.mas ? '' : b.dataset.mas; render(); }); });
+    q('[data-cur]', function (b) { b.addEventListener('click', function () { st.cur = b.dataset.cur; st.mas = ''; render(); }); });
+    q('[data-cd]', function (b) { b.addEventListener('click', function (e) { e.stopPropagation(); st.curDar = b.dataset.cd; st.act = 'dar'; st.mas = ''; render(); }); });
+    q('[data-cr]', function (b) { b.addEventListener('click', function (e) { e.stopPropagation(); st.curRec = b.dataset.cr; st.act = 'rec'; st.mas = ''; render(); }); });
     q('[data-box]', function (b) { b.addEventListener('click', function () { st.act = b.dataset.box; render(); }); });
     q('.list li[data-i]', function (li) {
       function abrir() { var x = st.movs[+li.dataset.i]; st.edit = { i: +li.dataset.i, tipo: x.t, cur: x.cur, monto: fmtIn(Math.abs(x.m)), det: x.det, d: x.d }; render(); }

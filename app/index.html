@@ -177,6 +177,20 @@ html,body{overflow-x:hidden;overscroll-behavior-x:none;max-width:100%}
 body{touch-action:pan-y}
 .app,.page{max-width:100%;overflow-x:clip}
 input,textarea{touch-action:manipulation}
+/* v1.7 · monedas en una sola fila y formato celular también en la computadora */
+.cur{flex-wrap:nowrap;gap:6px}
+.cur.extra{flex-wrap:wrap}
+.cur .chip{flex:1 1 0;min-width:0;justify-content:center;padding:0 6px;gap:6px;height:clamp(34px,4.8dvh,40px);font-size:13px;white-space:nowrap}
+.cur.extra .chip{flex:0 0 auto;padding:0 14px}
+.chip.mas{flex:0 0 auto;color:var(--muted);padding:0 10px}
+.screen{padding-bottom:12px}
+.where{font-size:11px}
+@media (min-width:600px){
+  html,body{background:#000}
+  body{background-image:none}
+  .page{width:420px;max-width:420px}
+  .app{box-shadow:0 0 0 1px var(--line),0 0 60px rgba(198,255,61,.06)}
+}
 /* v1.6 · menú arriba */
 .tabs{border-top:0;border-bottom:1px solid var(--line);padding-bottom:0}
 .tabs button{border-top:0;margin-top:0;border-bottom:2px solid transparent;margin-bottom:-1px;height:48px}
