@@ -1,4 +1,4 @@
-/* ZIMPLES NUMBREZ · app (PWA)
+/* ZIMPLES NUMBERZ · app (PWA)
  * Habla directo con la API de Google Sheets desde el celular, con el permiso drive.file.
  * No hay servidor intermedio. Estructura que asume la planilla:
  *  - REGISTRO: el mes 1 empieza en la fila 19 y cada bloque siguiente 101 filas más abajo (100 renglones por mes).
@@ -8,7 +8,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.7 · 2026-11-05';
+  var VERSION = '1.8 · 2026-11-05';
   var SCOPE = 'https://www.googleapis.com/auth/drive.file';
   var SB = 'https://sheets.googleapis.com/v4/spreadsheets/';
   var BLOQUE = 101, ENTRADAS = 100;

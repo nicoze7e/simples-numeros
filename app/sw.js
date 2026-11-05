@@ -1,5 +1,5 @@
 // Service worker de la app: guarda la página para que abra rápido. Las llamadas a Google siempre van a la red.
-var CACHE = 'sn-app-v7';
+var CACHE = 'sn-app-v8';
 var BASE = ['./', 'index.html', 'app.js', 'config.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(BASE); }));
