@@ -8,7 +8,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.8 · 2026-11-05';
+  var VERSION = '1.9 · 2026-11-06';
   var SCOPE = 'https://www.googleapis.com/auth/drive.file';
   var SB = 'https://sheets.googleapis.com/v4/spreadsheets/';
   var BLOQUE = 101, ENTRADAS = 100;
@@ -512,7 +512,8 @@
   function vPlanilla() {
     return '<div class="bienvenida"><h2>Elegí tu planilla</h2><p>Buscá tu planilla en tu Drive y tocá «Seleccionar».</p>' +
       (st.msg ? '<p class="aviso">' + esc(st.msg) + '</p>' : '') +
-      '<button type="button" id="btnPick" class="save in">ELEGIR MI PLANILLA</button></div>';
+      '<button type="button" id="btnPick" class="save in">ELEGIR MI PLANILLA</button>' +
+      '<p class="hint">¿Ves un cartel de error? Abrí la app directo en Safari o Chrome (no dentro de WhatsApp o Instagram) y probá de nuevo.</p></div>';
   }
   function vAjustes() {
     var id = fid();
@@ -653,7 +654,7 @@
     if (!window.gapi) { toastSimple('El selector de Google todavía no cargó. Probá en unos segundos.'); return; }
     gapi.load('picker', function () {
       var v = new google.picker.DocsView(google.picker.ViewId.SPREADSHEETS).setMode(google.picker.DocsViewMode.LIST);
-      new google.picker.PickerBuilder().addView(v).setOAuthToken(tok).setDeveloperKey(cfg.apiKey).setAppId(cfg.appId)
+      new google.picker.PickerBuilder().addView(v).setOAuthToken(tok).setDeveloperKey(cfg.apiKey).setAppId(cfg.appId).setOrigin(location.protocol + '//' + location.host)
         .setCallback(function (d) {
           if (d.action === google.picker.Action.PICKED) { LS.set('sn_file', d.docs[0].id); st.msg = ''; cargar(); }
         }).build().setVisible(true);
