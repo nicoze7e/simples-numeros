@@ -8,10 +8,10 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.9 · 2026-11-06';
+  var VERSION = '2.0 · 2026-11-06';
   var SCOPE = 'https://www.googleapis.com/auth/drive.file';
   var SB = 'https://sheets.googleapis.com/v4/spreadsheets/';
-  var BLOQUE = 101, ENTRADAS = 100;
+  var BLOQUE = 101, ENTRADAS = 100, COLS = 'CDEFGHIJ';
   var MESES = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
   var COL = ['--usd', '--ars', '--eur', '--c4', '--c5', '--c6', '--c7'];
   /* Perfiles de planilla. La app detecta cuál es por los nombres de las pestañas (ver prep()).
@@ -38,7 +38,7 @@
 
   var tok = null, exp = 0, tc = null, cb = null;
   var D = null, A = null, AN = null, toastT = null;
-  var st = { vista: 'cargando', mas: '', tab: 'anotar', tipo: 'SALIDA', cur: '', txt: '', det: '', dar: '', rec: '', curDar: '', curRec: '', act: 'dar', edit: null, busy: false, error: '', msg: '', movs: [], usadas: 0, mes: '', hoy: '', errA: '' };
+  var st = { fm: null, fc: null, vista: 'cargando', mas: '', tab: 'anotar', tipo: 'SALIDA', cur: '', txt: '', det: '', dar: '', rec: '', curDar: '', curRec: '', act: 'dar', edit: null, busy: false, error: '', msg: '', movs: [], usadas: 0, mes: '', hoy: '', errA: '' };
 
   function $(s) { return document.querySelector(s); }
   function el(t, a, h) { var e = document.createElement(t); for (var k in a) e.setAttribute(k, a[k]); if (h != null) e.innerHTML = h; return e; }
@@ -190,6 +190,27 @@
       return out;
     });
   }
+  /* Datos extra de la plantilla (solo perfil simples): cotización propia, cuentas, totales y diferencia. */
+  function celdaCol(s) { return COLS.charAt(P.panel[s]); }
+  function extras() {
+    var q = ['AJUSTES!C3:C9', 'AJUSTES!E3:E9', H('C3:J9'), H('C14:J15')].map(function (x) { return 'ranges=' + enc(x); }).join('&');
+    return api(SB + fid() + '/values:batchGet?' + q + '&' + UNF).then(function (j) {
+      var v = j.valueRanges || [];
+      function g(i) { return (v[i] && v[i].values) || []; }
+      var cot = [], ctas = [], tot = [], des = [], i, s;
+      for (i = 0; i < 7; i++) { var c = g(0)[i] && g(0)[i][0]; cot.push(typeof c === 'number' && c > 0 ? c : null); }
+      for (i = 0; i < 7; i++) {
+        var nom = String((g(1)[i] && g(1)[i][0]) || '').trim(), sal = [], tiene = false;
+        for (s = 0; s < 7; s++) { var cel = g(2)[i] && g(2)[i][P.panel[s]]; var n = typeof cel === 'number' ? cel : null; sal.push(n); if (n !== null) tiene = true; }
+        ctas.push({ slot: i, nombre: nom || ('Cuenta ' + (i + 1)), saldos: sal, usada: tiene || (nom !== '' && !/^Cuenta \d$/i.test(nom)) });
+      }
+      for (s = 0; s < 7; s++) {
+        var a = g(3)[0] && g(3)[0][P.panel[s]], b = g(3)[1] && g(3)[1][P.panel[s]];
+        tot.push(typeof a === 'number' ? a : null); des.push(typeof b === 'number' ? b : null);
+      }
+      return { cot: cot, cuentas: ctas, tot: tot, des: des };
+    });
+  }
   function validar(m) {
     var nombres = D ? D.monedas.map(function (x) { return x.nombre; }) : [];
     if (nombres.indexOf(m.moneda) < 0) throw new Error('Esa moneda no está en tu planilla.');
@@ -254,7 +275,7 @@
     },
     obtenerDatos: function () {
       var k = mesNum(), ini = inicioBloque(k);
-      return Promise.all([monedas(), getV(H('C' + ini + ':G' + (ini + ENTRADAS - 1)), '&dateTimeRenderOption=FORMATTED_STRING')]).then(function (r) {
+      return Promise.all([monedas(), getV(H('C' + ini + ':G' + (ini + ENTRADAS - 1)), '&dateTimeRenderOption=FORMATTED_STRING'), P.id === 'simples' ? extras().catch(function () { return null; }) : Promise.resolve(null)]).then(function (r) {
         var v = r[1], movs = [], usadas = 0;
         for (var i = 0; i < v.length; i++) {
           var row = v[i] || [], monto = row[2];
@@ -264,7 +285,7 @@
           movs.push({ fila: ini + i, d: String(row[0] === undefined ? '' : row[0]), cur: String(row[1] || ''), m: sal ? -monto : monto, t: sal ? 'SALIDA' : 'INGRESO', det: String(row[4] === undefined ? '' : row[4]) });
         }
         movs.reverse();
-        return { monedas: r[0], mes: MESES[k - 1], hoy: hoyTxt(), filasUsadas: usadas, movimientos: movs.slice(0, 60) };
+        return { monedas: r[0], extra: r[2], mes: MESES[k - 1], hoy: hoyTxt(), filasUsadas: usadas, movimientos: movs.slice(0, 60) };
       });
     },
     registrar: function (mov) {
@@ -299,6 +320,33 @@
         });
         return jsonPost(SB + fid() + '/values:batchClear', { ranges: filas.map(rangoFila) });
       }).then(function () { return { borradas: filas.length }; });
+    },
+    contarMov: function (nombre) {
+      return getV(H('D' + P.primera + ':D' + (P.primera + BLOQUE * 12 - 2))).then(function (v) {
+        var n = 0;
+        for (var i = 0; i < v.length; i++) { if (i % BLOQUE === ENTRADAS) continue; if (v[i] && String(v[i][0]).trim() === nombre) n++; }
+        return n;
+      });
+    },
+    guardarMoneda: function (slot, nombre, cot) {
+      return jsonPost(SB + fid() + '/values:batchUpdate', { valueInputOption: 'RAW', data: [
+        { range: 'AJUSTES!B' + (3 + slot), values: [[nombre]] },
+        { range: 'AJUSTES!C' + (3 + slot), values: [[cot > 0 ? cot : '']] }] });
+    },
+    quitarMoneda: function (slot) {
+      return jsonPost(SB + fid() + '/values:batchClear', { ranges: ['AJUSTES!B' + (3 + slot), 'AJUSTES!C' + (3 + slot)] });
+    },
+    guardarCuenta: function (slot, nombre, saldos, nMon) {
+      var data = [{ range: 'AJUSTES!E' + (3 + slot), values: [[nombre]] }];
+      for (var s = 0; s < nMon; s++) data.push({ range: H(celdaCol(s) + (3 + slot)), values: [[saldos[s] === null || saldos[s] === undefined ? '' : saldos[s]]] });
+      return jsonPost(SB + fid() + '/values:batchUpdate', { valueInputOption: 'RAW', data: data });
+    },
+    quitarCuenta: function (slot) {
+      var rs = [];
+      for (var s = 0; s < 7; s++) rs.push(H(celdaCol(s) + (3 + slot)));
+      return jsonPost(SB + fid() + '/values:batchClear', { ranges: rs }).then(function () {
+        return jsonPost(SB + fid() + '/values:batchUpdate', { valueInputOption: 'RAW', data: [{ range: 'AJUSTES!E' + (3 + slot), values: [['Cuenta ' + (slot + 1)]] }] });
+      });
     },
     obtenerAnalisis: function () {
       var k = mesNum();
@@ -411,7 +459,8 @@
   }
   function vMes() {
     var t = {}; D.monedas.forEach(function (m) { t[m.nombre] = 0; }); st.movs.forEach(function (x) { if (t[x.cur] !== undefined) t[x.cur] += x.m; });
-    var h = '<div class="hint">' + st.mes + ' · últimos movimientos</div><div class="tot">' + D.monedas.map(function (m) { return '<div><small style="color:var(' + COL[m.slot] + ')">' + esc(m.c + ' ' + m.s) + '</small><b>' + fmt(t[m.nombre]) + '</b></div>'; }).join('') + '</div>';
+    var h = '<div class="hint">' + st.mes + ' · totales del mes</div><div class="tot">' + D.monedas.map(function (m) { return '<div><small style="color:var(' + COL[m.slot] + ')">' + esc(m.c + ' ' + m.s) + '</small><b>' + fmt(t[m.nombre]) + '</b></div>'; }).join('') + '</div>';
+    h += bloqueCuentas() + '<div class="hint">Últimos movimientos</div>';
     if (!st.movs.length) return h + '<div class="vacio">Todavía no anotaste nada este mes.<br>Tus movimientos van a aparecer acá.</div>';
     h += '<ul class="list">';
     st.movs.forEach(function (x, i) {
@@ -482,7 +531,7 @@
       var tot = A.pesos.reduce(function (a, p) { return a + p.usd; }, 0);
       h += '<div class="sec"><h2>Dónde está tu plata</h2><p>Peso de cada moneda, en dólares.</p><div class="stack">' + A.pesos.map(function (p) { return '<i style="width:' + (p.usd / tot * 100) + '%;background:var(' + colV(p.nombre) + ')"></i>'; }).join('') + '</div><div class="leg">' + A.pesos.map(function (p) { return '<span><i style="background:var(' + colV(p.nombre) + ')"></i>' + esc(p.c) + ' ' + Math.round(p.usd / tot * 100) + '% · ' + usdF(p.usd) + '</span>'; }).join('') + '</div></div>';
     }
-    if (A.sinTasa && A.sinTasa.length) h += '<div class="hint">Falta la cotización de ' + esc(A.sinTasa.join(', ')) + ': esos movimientos no entran en el análisis. Revisá la hoja REGISTRO.</div>';
+    if (A.sinTasa && A.sinTasa.length) h += '<div class="aviso2">Falta la cotización de ' + esc(A.sinTasa.join(', ')) + ': esos movimientos no entran en el análisis.' + (P.id === 'simples' ? '<button type="button" class="ghost" id="goMon">PONER LA COTIZACIÓN</button>' : ' Revisá la hoja.') + '</div>';
     return h + seccionAnios() + '<div class="hint">Más filtros y gráficos: abrí la hoja.</div>';
   }
   function vEditar() {
@@ -519,6 +568,8 @@
     var id = fid();
     return '<div class="ed"><h2>Ajustes</h2>' +
       (id ? '<a class="ghost lnk" href="https://docs.google.com/spreadsheets/d/' + esc(id) + '/edit" target="_blank" rel="noopener">ABRIR MI PLANILLA</a>' : '') +
+      '<button type="button" id="aMon" class="ghost">MIS MONEDAS</button>' +
+      '<button type="button" id="aAct" class="ghost">ACTUALIZAR DATOS</button>' +
       '<button type="button" id="aCambiar" class="ghost">CAMBIAR DE PLANILLA</button>' +
       '<button type="button" id="aSalir" class="ghost">CERRAR SESIÓN EN ESTE CELULAR</button>' +
       '<p class="hint">Para quitarle el acceso a la app desde Google: myaccount.google.com/permissions</p>' +
@@ -526,19 +577,74 @@
       '<p class="hint">Versión ' + VERSION + '</p></div>';
   }
 
+
+  /* ---------- Mis monedas y mis cuentas ---------- */
+  function fmtN(n) { return fmt(n, n % 1 ? 2 : 0); }
+  function bloqueCuentas() {
+    var x = D && D.extra; if (!x) return '';
+    var usadas = x.cuentas.filter(function (c) { return c.usada; }), libre = x.cuentas.filter(function (c) { return !c.usada; });
+    var h = '<div class="sec ctas"><h2>Mis cuentas</h2>';
+    if (!usadas.length) h += '<p>Anotá dónde tenés tu plata (efectivo, banco, billetera) y compará con tu registro.</p>';
+    usadas.forEach(function (c) {
+      var partes = D.monedas.filter(function (m) { return c.saldos[m.slot] !== null; }).map(function (m) { return esc(m.c) + ' ' + fmtN(c.saldos[m.slot]); });
+      h += '<button type="button" class="cta" data-cta="' + c.slot + '"><b>' + esc(c.nombre) + '</b><span>' + (partes.join(' · ') || 'sin saldo anotado') + '</span></button>';
+    });
+    var hay = x.tot.some(function (v) { return v !== null && v !== 0; });
+    if (hay) {
+      var dd = D.monedas.filter(function (m) { return x.des[m.slot] !== null && Math.abs(x.des[m.slot]) >= 0.005; }).map(function (m) { var d = x.des[m.slot]; return esc(m.c) + ' ' + (d > 0 ? '+' : '') + fmtN(d); });
+      h += dd.length ? '<div class="dif">Diferencia entre tus cuentas y lo que anotaste: ' + dd.join(' · ') + '. Si recién empezás es normal: es lo que ya tenías. Positivo = las cuentas tienen más.</div>' : '<div class="dif ok">Tus cuentas coinciden con tu registro ✓</div>';
+    }
+    if (libre.length) h += '<button type="button" class="ghost" id="cNueva">+ AGREGAR CUENTA</button>';
+    return h + '</div>';
+  }
+  function vCuenta() {
+    var f = st.fc;
+    var h = '<div class="ed"><h2>' + (f.nueva ? 'Nueva cuenta' : 'Editar cuenta') + '</h2>' +
+      '<label class="lab" for="cnom">Nombre</label><input class="det" id="cnom" maxlength="30" placeholder="Ej.: Efectivo, Banco, Billetera" value="' + esc(f.nombre) + '" autocomplete="off">' +
+      '<p class="hint">Cuánto tenés hoy en cada moneda. Dejalo vacío si no tenés.</p>';
+    D.monedas.forEach(function (m) {
+      h += '<label class="lab" for="cs' + m.slot + '">' + esc(m.c + ' ' + m.s) + '</label><input class="det" id="cs' + m.slot + '" inputmode="decimal" value="' + esc(f.saldos[m.slot] === null ? '' : fmtIn(f.saldos[m.slot])) + '" autocomplete="off">';
+    });
+    return h + '<button type="button" id="cGuardar" class="save in"' + (st.busy ? ' disabled' : '') + '>' + (st.busy ? 'GUARDANDO…' : 'GUARDAR CUENTA') + '</button>' +
+      '<div class="acts"><button type="button" id="cCancelar" class="ghost">CANCELAR</button>' + (f.nueva ? '<span></span>' : '<button type="button" id="cQuitar" class="ghost del"' + (st.busy ? ' disabled' : '') + '>QUITAR</button>') + '</div></div>';
+  }
+  function vMonedas() {
+    var h = '<div class="ed"><h2>Mis monedas</h2>';
+    if (P.id !== 'simples') return h + '<p class="hint">Esta planilla guarda sus monedas en el panel de la hoja. Cambialas directamente allí.</p><button type="button" id="mVolver" class="save in">VOLVER</button></div>';
+    var f = st.fm;
+    if (f) {
+      h += '<label class="lab" for="mcod">Código (3 letras)</label><input class="det up" id="mcod" maxlength="3" placeholder="EUR" value="' + esc(f.cod) + '" autocomplete="off" autocapitalize="characters"' + (f.fijo ? ' disabled' : '') + '>' +
+        '<label class="lab" for="msim">Símbolo</label><input class="det" id="msim" maxlength="4" placeholder="€" value="' + esc(f.sim) + '" autocomplete="off">' +
+        '<label class="lab" for="mcot">Cotización (opcional)</label><input class="det" id="mcot" inputmode="decimal" placeholder="Cuánto vale 1 USD en esta moneda" value="' + esc(f.cot) + '" autocomplete="off"' + (f.fijo ? ' disabled' : '') + '>' +
+        '<p class="hint">' + (f.fijo ? 'USD es la moneda base: las demás se miden contra ella.' : 'Si la dejás vacía, la planilla la busca sola. Si no la encuentra, ponela acá.') + '</p>';
+      if (f.aviso) h += '<div class="aviso2">' + f.aviso + '<button type="button" class="ghost" id="mSeguir">CONTINUAR IGUAL</button></div>';
+      return h + '<button type="button" id="mGuardar" class="save in"' + (st.busy ? ' disabled' : '') + '>' + (st.busy ? 'GUARDANDO…' : 'GUARDAR MONEDA') + '</button>' +
+        '<div class="acts"><button type="button" id="mCancelar" class="ghost">CANCELAR</button>' + ((f.nueva || f.fijo) ? '<span></span>' : '<button type="button" id="mQuitar" class="ghost del"' + (st.busy ? ' disabled' : '') + '>QUITAR</button>') + '</div></div>';
+    }
+    h += '<p class="hint">Son las monedas que elegís al anotar. Hasta 7. El código son 3 letras (USD, EUR) y el símbolo es lo que ves junto al monto.</p><ul class="list ml">';
+    D.monedas.forEach(function (m) {
+      var cot = D.extra && D.extra.cot[m.slot];
+      h += '<li data-mm="' + m.slot + '" tabindex="0" role="button" aria-label="Editar ' + esc(m.nombre) + '"><span class="d"><i class="pt" style="background:var(' + COL[m.slot] + ')"></i></span><span class="t">' + esc(m.c + ' ' + m.s) + '<small>' + (m.c === 'USD' ? 'moneda base' : cot ? '1 USD = ' + fmtN(cot) : 'cotización automática') + '</small></span><span class="m">EDITAR</span></li>';
+    });
+    h += '</ul>';
+    if (D.monedas.length < 7) h += '<button type="button" id="mNueva" class="ghost">+ AGREGAR MONEDA</button>';
+    return h + '<button type="button" id="mVolver" class="save in">VOLVER</button></div>';
+  }
+
   function render() {
     var s = $('#screen'), app = $('#app');
     var enApp = st.vista === 'app';
     app.classList.toggle('sinTabs', !enApp);
-    $('#gear').hidden = !(enApp || st.vista === 'ajustes');
+    $('#gear').hidden = !(enApp || st.vista === 'ajustes' || st.vista === 'monedas');
     if (st.vista === 'cargando') { s.innerHTML = '<div class="vacio">Cargando…</div>'; $('#mesTop').textContent = ''; return; }
     if (st.vista === 'error') { s.innerHTML = '<div class="vacio">No pude leer tu planilla.<br>' + esc(st.error) + '<br><button type="button" class="ghost" id="reload">REINTENTAR</button></div>'; bind(); return; }
     if (st.vista === 'config') s.innerHTML = vConfig();
     else if (st.vista === 'login') s.innerHTML = vLogin();
     else if (st.vista === 'planilla') s.innerHTML = vPlanilla();
     else if (st.vista === 'ajustes') s.innerHTML = vAjustes();
-    else if (!D.monedas.length) s.innerHTML = '<div class="vacio">Todavía no hay monedas.<br>Escribí una en la hoja AJUSTES y volvé.</div>';
-    else s.innerHTML = st.edit ? vEditar() : st.tab === 'anotar' ? vAnotar() : st.tab === 'cambio' ? vCambio() : st.tab === 'analisis' ? vAnalisis() : vMes();
+    else if (st.vista === 'monedas') s.innerHTML = vMonedas();
+    else if (!D.monedas.length) s.innerHTML = '<div class="vacio">Todavía no hay monedas.<br>Agregá la primera para empezar.<br><button type="button" class="ghost" id="goMon">AGREGAR MONEDA</button></div>';
+    else s.innerHTML = st.fc ? vCuenta() : st.edit ? vEditar() : st.tab === 'anotar' ? vAnotar() : st.tab === 'cambio' ? vCambio() : st.tab === 'analisis' ? vAnalisis() : vMes();
     if (enApp) {
       $('#mesTop').textContent = st.mes + ' · ' + st.hoy;
       document.querySelectorAll('.tabs button').forEach(function (b) { b.setAttribute('aria-selected', b.dataset.tab === st.tab); });
@@ -612,8 +718,16 @@
       });
     });
   }
-  function refrescar() {
-    srv('obtenerDatos', [], function (d) { D = d; st.movs = d.movimientos; st.usadas = d.filasUsadas; st.mes = d.mes; st.hoy = d.hoy; render(); }, function (e) { if (e && e.login) falla(e); });
+  var ultimaCarga = 0;
+  function ajustarSel() {
+    if (!D || !D.monedas.length) return;
+    var nombres = D.monedas.map(function (m) { return m.nombre; });
+    if (nombres.indexOf(st.cur) < 0) st.cur = nombres[0];
+    if (nombres.indexOf(st.curDar) < 0) st.curDar = nombres[0];
+    if (nombres.indexOf(st.curRec) < 0) st.curRec = nombres[1] || nombres[0];
+  }
+  function refrescar(ok) {
+    srv('obtenerDatos', [], function (d) { D = d; ultimaCarga = Date.now(); st.movs = d.movimientos; st.usadas = d.filasUsadas; st.mes = d.mes; st.hoy = d.hoy; ajustarSel(); render(); if (ok) ok(); }, function (e) { if (e && e.login) falla(e); });
   }
   function cargarAnalisis() {
     st.errA = ''; render();
@@ -624,13 +738,8 @@
   function cargar() {
     st.vista = 'cargando'; render();
     API.obtenerDatos().then(function (d) {
-      D = d; st.movs = d.movimientos; st.usadas = d.filasUsadas; st.mes = d.mes; st.hoy = d.hoy;
-      if (d.monedas.length) {
-        var nombres = d.monedas.map(function (m) { return m.nombre; });
-        if (nombres.indexOf(st.cur) < 0) st.cur = nombres[0];
-        if (nombres.indexOf(st.curDar) < 0) st.curDar = nombres[0];
-        if (nombres.indexOf(st.curRec) < 0) st.curRec = nombres[1] || nombres[0];
-      }
+      D = d; ultimaCarga = Date.now(); st.movs = d.movimientos; st.usadas = d.filasUsadas; st.mes = d.mes; st.hoy = d.hoy;
+      ajustarSel();
       st.vista = 'app'; render();
     }).catch(function (e) {
       if (e && e.login) { st.vista = 'login'; st.msg = ''; render(); return; }
@@ -659,6 +768,91 @@
           if (d.action === google.picker.Action.PICKED) { LS.set('sn_file', d.docs[0].id); st.msg = ''; cargar(); }
         }).build().setVisible(true);
     });
+  }
+
+
+  /* ---------- Acciones: monedas y cuentas ---------- */
+  function leerFm() {
+    var f = st.fm; if (!f) return;
+    var a = $('#mcod'), b = $('#msim'), c = $('#mcot');
+    if (a && !a.disabled) f.cod = a.value.toUpperCase().replace(/[^A-Z]/g, ''); if (b) f.sim = b.value.trim(); if (c && !c.disabled) f.cot = c.value;
+  }
+  function abrirMoneda(slot) {
+    var m = D.monedas.filter(function (x) { return x.slot === slot; })[0], cot = D.extra && D.extra.cot[slot];
+    if (m) st.fm = { slot: slot, nueva: false, cod: m.c, sim: m.s, cot: cot ? fmtIn(cot) : '', viejo: m.nombre, fijo: m.c === 'USD', aviso: '' };
+    else {
+      var usados = D.monedas.map(function (x) { return x.slot; }), libre = 0; while (usados.indexOf(libre) >= 0) libre++;
+      st.fm = { slot: libre, nueva: true, cod: '', sim: '', cot: '', viejo: '', fijo: false, aviso: '' };
+    }
+    render();
+  }
+  function terminarMoneda(msg) {
+    st.fm = null; st.busy = false;
+    refrescar(function () { toastSimple(msg); });
+  }
+  function guardarMon(seguir) {
+    leerFm(); var f = st.fm; if (!f || st.busy) return;
+    var cod = f.cod, sim = f.sim || '$';
+    if (!/^[A-Z]{3}$/.test(cod)) { toastSimple('El código son 3 letras, por ejemplo EUR.', true); return; }
+    if (/\s/.test(sim)) { toastSimple('El símbolo no puede llevar espacios.', true); return; }
+    var otro = D.monedas.some(function (m) { return m.slot !== f.slot && m.c === cod; });
+    if (otro) { toastSimple('Ya tenés una moneda con el código ' + cod + '.', true); return; }
+    var cot = parse(f.cot);
+    if (f.cot && !(cot > 0)) { toastSimple('La cotización tiene que ser un número mayor que cero.', true); return; }
+    var nombre = cod + ' ' + sim;
+    var guardar = function () {
+      st.busy = true; render();
+      srv('guardarMoneda', [f.slot, nombre, cot], function () { terminarMoneda(f.nueva ? 'Moneda agregada: ' + nombre : 'Moneda guardada'); }, function (e) { st.busy = false; falla(e); });
+    };
+    if (!f.nueva && f.viejo !== nombre && !seguir) {
+      st.busy = true; render();
+      srv('contarMov', [f.viejo], function (n) {
+        st.busy = false;
+        if (n > 0) { f.aviso = 'Tenés <b>' + n + '</b> movimiento' + (n > 1 ? 's' : '') + ' anotado' + (n > 1 ? 's' : '') + ' como «' + esc(f.viejo) + '». Si cambiás el nombre, quedan en la hoja pero la app y el panel dejan de sumarlos.'; f.accion = 'guardar'; render(); }
+        else guardar();
+      }, function (e) { st.busy = false; falla(e); });
+      return;
+    }
+    guardar();
+  }
+  function quitarMon(seguir) {
+    var f = st.fm; if (!f || st.busy) return;
+    var hacer = function () {
+      st.busy = true; render();
+      srv('quitarMoneda', [f.slot], function () { terminarMoneda('Moneda quitada'); }, function (e) { st.busy = false; falla(e); });
+    };
+    if (seguir) { hacer(); return; }
+    st.busy = true; render();
+    srv('contarMov', [f.viejo], function (n) {
+      st.busy = false;
+      if (n > 0) { f.aviso = 'Tenés <b>' + n + '</b> movimiento' + (n > 1 ? 's' : '') + ' anotado' + (n > 1 ? 's' : '') + ' en «' + esc(f.viejo) + '». Si la quitás, quedan en la hoja pero dejan de verse y de sumarse en la app y el panel.'; f.accion = 'quitar'; render(); }
+      else hacer();
+    }, function (e) { st.busy = false; falla(e); });
+  }
+  function leerFc() {
+    var f = st.fc; if (!f) return;
+    var n = $('#cnom'); if (n) f.nombre = n.value.trim();
+    D.monedas.forEach(function (m) { var e = $('#cs' + m.slot); if (e) { var v = e.value.trim(); f.saldos[m.slot] = v === '' ? null : parse(v); } });
+  }
+  function abrirCuenta(slot) {
+    var c = D.extra.cuentas[slot];
+    st.fc = { slot: slot, nueva: !c.usada, nombre: c.usada ? c.nombre : '', saldos: c.saldos.slice() };
+    st.tab = 'mes'; render();
+  }
+  function guardarCta() {
+    leerFc(); var f = st.fc; if (!f || st.busy) return;
+    if (!f.nombre) { toastSimple('Poné un nombre a la cuenta.', true); return; }
+    st.busy = true; render();
+    srv('guardarCuenta', [f.slot, f.nombre, f.saldos, 7], function () {
+      st.busy = false; st.fc = null; refrescar(function () { toastSimple('Cuenta guardada'); });
+    }, function (e) { st.busy = false; falla(e); });
+  }
+  function quitarCta() {
+    var f = st.fc; if (!f || st.busy) return;
+    st.busy = true; render();
+    srv('quitarCuenta', [f.slot], function () {
+      st.busy = false; st.fc = null; refrescar(function () { toastSimple('Cuenta quitada'); });
+    }, function (e) { st.busy = false; falla(e); });
   }
 
   function bind() {
@@ -694,26 +888,42 @@
     on('#aCambiar', function () { st.msg = ''; st.vista = vivo() ? 'planilla' : 'login'; render(); });
     on('#aSalir', function () { tok = null; exp = 0; LS.set('sn_tok', null); LS.set('sn_hint', null); st.msg = ''; st.vista = 'login'; render(); });
     on('#aVolver', function () { st.vista = 'app'; render(); });
+    on('#aMon', function () { st.fm = null; st.vista = 'monedas'; render(); });
+    on('#aAct', function () { toastSimple('Actualizando…'); refrescar(function () { st.vista = 'app'; render(); toastSimple('Datos al día.'); }); });
+    on('#goMon', function () { st.fm = null; st.vista = 'monedas'; render(); });
+    on('#mVolver', function () { st.fm = null; st.vista = 'ajustes'; render(); });
+    on('#mNueva', function () { abrirMoneda(-1); });
+    q('[data-mm]', function (li) {
+      function ab() { abrirMoneda(+li.dataset.mm); }
+      li.addEventListener('click', ab); li.addEventListener('keydown', function (e) { if (e.key === 'Enter') ab(); });
+    });
+    on('#mGuardar', function () { guardarMon(false); });
+    on('#mCancelar', function () { st.fm = null; render(); });
+    on('#mQuitar', function () { quitarMon(false); });
+    on('#mSeguir', function () { var f = st.fm; if (!f) return; leerFm(); if (f.accion === 'quitar') quitarMon(true); else guardarMon(true); });
+    on('#cNueva', function () { var c = D.extra.cuentas.filter(function (x) { return !x.usada; })[0]; if (c) abrirCuenta(c.slot); });
+    q('[data-cta]', function (b) { b.addEventListener('click', function () { abrirCuenta(+b.dataset.cta); }); });
+    on('#cGuardar', guardarCta); on('#cCancelar', function () { st.fc = null; render(); }); on('#cQuitar', quitarCta);
     var d = $('#det'); if (d) d.addEventListener('input', function () { st.det = d.value; });
   }
   $('#gear').addEventListener('click', function () { st.vista = st.vista === 'ajustes' ? 'app' : 'ajustes'; st.edit = null; render(); });
   document.querySelectorAll('.tabs button').forEach(function (b) {
     b.addEventListener('click', function () {
-      st.tab = b.dataset.tab; st.edit = null; render();
+      st.tab = b.dataset.tab; st.edit = null; st.fc = null; render();
       if (st.tab === 'mes') refrescar();
       if (st.tab === 'analisis') cargarAnalisis();
     });
   });
   document.addEventListener('keydown', function (e) {
     if (st.vista !== 'app' || !D || (e.target && e.target.tagName === 'INPUT')) return;
-    if (st.tab === 'mes' || st.tab === 'analisis' || st.edit) return;
+    if (st.tab === 'mes' || st.tab === 'analisis' || st.edit || st.fc) return;
     if (/^[0-9]$/.test(e.key)) { pad(e.key); } else if (e.key === ',' || e.key === '.') { pad(','); } else if (e.key === 'Backspace') { pad('back'); }
     else if (e.key === 'Enter') { var s = $('#save') || $('#saveC'); if (s && !s.disabled) s.click(); }
   });
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) return;
     ultimoFallo = 0; renovarSilencio();
-    if (st.vista === 'app' && st.tab === 'mes') refrescar();
+    if (st.vista === 'app' && !st.edit && !st.fc && !st.busy && (st.tab === 'mes' || Date.now() - ultimaCarga > 20000)) refrescar();
   });
   /* Deslizar de lado cambia de pestaña (solo con un gesto claramente horizontal y sin teclado abierto). */
   (function () {
@@ -721,7 +931,7 @@
     var zona = document;
     zona.addEventListener('touchstart', function (e) {
       var t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; t0 = Date.now();
-      ok = e.touches.length === 1 && st.vista === 'app' && !st.edit && !/INPUT|TEXTAREA|SELECT/.test(e.target.tagName);
+      ok = e.touches.length === 1 && st.vista === 'app' && !st.edit && !st.fc && !/INPUT|TEXTAREA|SELECT/.test(e.target.tagName);
     }, { passive: true });
     zona.addEventListener('touchend', function (e) {
       if (!ok) return; ok = false;
