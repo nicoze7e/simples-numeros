@@ -69,17 +69,17 @@ a{color:inherit}
 
   <header style="display:flex;flex-direction:column;gap:12px">
     <p class="kick">Tu guía privada</p>
-    <h1>Gracias por tu compra. <em>Empezá</em> en 10 minutos.</h1>
+    <h1>Gracias por tu compra. <em>Empezá</em> en 5 minutos.</h1>
     <p class="sub">Seguí los pasos en orden. Cada uno te dice qué tocar y cómo saber que salió bien. Podés ir marcando lo que hacés: la página se acuerda de dónde quedaste.</p>
   </header>
 
   <div class="need">
     <div><b>Una cuenta de Google</b>La misma de tu Gmail. Si no tenés, se crea gratis.</div>
     <div><b>Tu celular</b>iPhone o Android. Esta guía se puede leer en la compu.</div>
-    <div><b>10 minutos</b>Es una sola vez. Después anotar lleva tres toques.</div>
+    <div><b>5 minutos</b>Es una sola vez. Después anotar lleva tres toques.</div>
   </div>
 
-  <div class="prog" aria-live="polite"><span id="pt">0 de 5</span><div class="bar"><i id="pb"></i></div></div>
+  <div class="prog" aria-live="polite"><span id="pt">0 de 3</span><div class="bar"><i id="pb"></i></div></div>
 
   <section class="step" id="s1" data-done="0">
     <div class="sh"><span class="n">1</span><div><h2>Hacé tu copia de la planilla</h2><span class="time">2 min</span></div></div>
@@ -95,32 +95,22 @@ a{color:inherit}
   </section>
 
   <section class="step" id="s2" data-done="0">
-    <div class="sh"><span class="n">2</span><div><h2>Abrí la app e iniciá sesión</h2><span class="time">3 min</span></div></div>
-    <p>Hacelo desde tu celular, en el navegador (Safari en iPhone, Chrome en Android).</p>
+    <div class="sh"><span class="n">2</span><div><h2>Abrí la app y elegí tu planilla</h2><span class="time">3 min</span></div></div>
+    <p>Hacelo desde tu celular, en el <b>navegador</b>: Safari en iPhone, Chrome en Android. Si te llegó este enlace por WhatsApp o Instagram, tocá «Abrir en el navegador» antes de seguir.</p>
     <ol>
       <li>Tocá <b>Abrir la app</b>.</li>
-      <li>Tocá <b>Iniciar sesión con Google</b> y elegí la misma cuenta donde hiciste la copia.</li>
-      <li>Google te muestra qué permiso pide. Leelo: es lo que explicamos más abajo. Aceptá.</li>
+      <li>Tocá <b>Iniciar sesión con Google</b>, elegí la misma cuenta donde hiciste la copia y aceptá el permiso.</li>
+      <li>Tocá el botón para buscar tu planilla, elegí la copia que acabás de hacer y tocá <b>Seleccionar</b>.</li>
     </ol>
     <a class="btn" href="../app/">Abrir la app</a>
-    <div class="see warn"><b>¿Ves un cartel que dice «Google no verificó esta app»?</b> Es normal en aplicaciones nuevas y chicas como esta. Tocá <b>Configuración avanzada</b> (o «Avanzado») y después <b>Ir a ZIMPLES NUMBERZ</b>. Esto pasa una sola vez.</div>
-    <div class="see warn"><b>¿Ves «Acceso bloqueado»?</b> Escribinos por Etsy con el mail de tu cuenta de Google: lo habilitamos y lo volvés a intentar.</div>
-    <button class="chk" type="button" data-s="2" aria-pressed="false">Listo, inicié sesión</button>
+    <div class="see"><b>Cómo sabés que salió bien:</b> ves el mes de hoy arriba y el teclado de números abajo.</div>
+    <div class="see warn"><b>¿Ves «Google no verificó esta app»?</b> Es normal en aplicaciones nuevas y chicas como esta. Tocá <b>Configuración avanzada</b> (o «Avanzado») y después <b>Ir a ZIMPLES NUMBERZ</b>. Pasa una sola vez.</div>
+    <div class="see warn"><b>¿Ves «Acceso bloqueado» o un cartel de error al elegir la planilla?</b> Escribinos por Etsy con una captura y el mail de tu cuenta de Google, y lo resolvemos enseguida. Mientras tanto probá abrir la app en otro navegador.</div>
+    <button class="chk" type="button" data-s="2" aria-pressed="false">Listo, veo el teclado</button>
   </section>
 
   <section class="step" id="s3" data-done="0">
-    <div class="sh"><span class="n">3</span><div><h2>Elegí tu planilla</h2><span class="time">1 min</span></div></div>
-    <ol>
-      <li>La app te muestra un botón para buscar tu planilla. Tocalo.</li>
-      <li>Se abre una lista de tu Drive. Elegí la copia que acabás de hacer.</li>
-      <li>Tocá <b>Seleccionar</b>.</li>
-    </ol>
-    <div class="see"><b>Cómo sabés que salió bien:</b> ves el mes de hoy arriba y el teclado de números abajo.</div>
-    <button class="chk" type="button" data-s="3" aria-pressed="false">Listo, veo el teclado</button>
-  </section>
-
-  <section class="step" id="s4" data-done="0">
-    <div class="sh"><span class="n">4</span><div><h2>Dejala en tu pantalla de inicio</h2><span class="time">1 min</span></div></div>
+    <div class="sh"><span class="n">3</span><div><h2>Dejala en tu pantalla de inicio</h2><span class="time">1 min</span></div></div>
     <p>Así se abre con un toque, como cualquier otra app.</p>
     <div class="tabs" role="tablist" aria-label="Tu celular">
       <button class="tab" role="tab" id="t-ios" aria-controls="p-ios" aria-selected="true">iPhone</button>
@@ -128,32 +118,19 @@ a{color:inherit}
     </div>
     <div class="panel" role="tabpanel" id="p-ios" aria-labelledby="t-ios">
       <ol>
-        <li>Abrí la app en <b>Safari</b>.</li>
-        <li>Tocá <b>Compartir</b> (el cuadrado con la flecha hacia arriba).</li>
+        <li>Con la app abierta en <b>Safari</b>, tocá <b>Compartir</b> (el cuadrado con la flecha hacia arriba).</li>
         <li>Elegí <b>Agregar a pantalla de inicio</b> y tocá <b>Agregar</b>.</li>
       </ol>
     </div>
     <div class="panel" role="tabpanel" id="p-and" aria-labelledby="t-and" hidden>
       <ol>
-        <li>Abrí la app en <b>Chrome</b>.</li>
-        <li>Tocá el menú <b>⋮</b> de arriba a la derecha.</li>
+        <li>Con la app abierta en <b>Chrome</b>, tocá el menú <b>⋮</b> de arriba a la derecha.</li>
         <li>Elegí <b>Instalar app</b> (o «Agregar a pantalla principal») y confirmá.</li>
       </ol>
     </div>
     <div class="see"><b>Cómo sabés que salió bien:</b> el ícono con la Z lima aparece en tu pantalla de inicio. De ahora en más abrí la app desde ese ícono.</div>
-    <button class="chk" type="button" data-s="4" aria-pressed="false">Listo, ya está el ícono</button>
-  </section>
-
-  <section class="step" id="s5" data-done="0">
-    <div class="sh"><span class="n">5</span><div><h2>Probala en un minuto</h2><span class="time">1 min</span></div></div>
-    <ol>
-      <li>En la app, tocá <b>SALIDA</b>, elegí una moneda y escribí un monto chico, por ejemplo 1.</li>
-      <li>En detalle escribí «prueba» y tocá <b>GUARDAR SALIDA</b>.</li>
-      <li>Abrí tu planilla, pestaña <b>REGISTRO</b>: en el mes de hoy está la fila, con la fecha puesta sola.</li>
-      <li>Volvé a la app y tocá <b>DESHACER</b> en el aviso de arriba (o corregí el movimiento en <b>MI MES</b>): la fila se vacía.</li>
-    </ol>
-    <div class="see"><b>Si la fila aparece, ya está.</b> Todo funciona y podés empezar a anotar de verdad.</div>
-    <button class="chk" type="button" data-s="5" aria-pressed="false">Listo, funciona</button>
+    <details><summary>Probala en un minuto (opcional)</summary><p>Tocá <b>SALIDA</b>, elegí una moneda, escribí 1 y tocá <b>GUARDAR SALIDA</b>. Abrí tu planilla, pestaña <b>REGISTRO</b>: la fila está en el mes de hoy. Volvé a la app y tocá <b>DESHACER</b>.</p></details>
+    <button class="chk" type="button" data-s="3" aria-pressed="false">Listo, ya está el ícono</button>
   </section>
 
   <section style="display:flex;flex-direction:column;gap:12px">
@@ -176,7 +153,7 @@ a{color:inherit}
       <details><summary>No encuentro mi planilla en la lista</summary><p>Comprobá que iniciaste sesión con la misma cuenta donde hiciste la copia. Si no aparece, volvé al paso 1 y hacela de nuevo.</p></details>
       <details><summary>Dice «No pude leer tu planilla»</summary><p>Elegiste otro archivo. En la app tocá el engranaje, <b>CAMBIAR DE PLANILLA</b>, y elegí la copia que tiene las pestañas EMPEZAR AQUÍ, REGISTRO y AJUSTES.</p></details>
       <details><summary>La fecha no aparece sola en la planilla</summary><p>En la planilla: Archivo → Configuración → Cálculo → «Cálculo iterativo: Activado». Es lo que deja que la fecha se escriba sola.</p></details>
-      <details><summary>Cambié de celular</summary><p>Repetí los pasos 2, 3 y 4 con la misma cuenta y la misma planilla. Todo lo anotado está ahí.</p></details>
+      <details><summary>Cambié de celular</summary><p>Repetí los pasos 2 y 3 con la misma cuenta y la misma planilla. Todo lo anotado está ahí.</p></details>
     </div>
   </section>
 
@@ -190,8 +167,8 @@ a{color:inherit}
   function pintar(){
     var n=0;
     btns.forEach(function(b){var s=b.dataset.s,on=!!hecho[s];b.setAttribute('aria-pressed',on);document.getElementById('s'+s).dataset.done=on?1:0;if(on)n++;});
-    document.getElementById('pt').textContent=n===5?'¡Listo!':n+' de 5';
-    document.getElementById('pb').style.width=(n*20)+'%';
+    document.getElementById('pt').textContent=n===3?'¡Listo!':n+' de 3';
+    document.getElementById('pb').style.width=Math.min(100,Math.round(n*100/3))+'%';
   }
   btns.forEach(function(b){b.addEventListener('click',function(){
     var s=b.dataset.s;hecho[s]=!hecho[s];
