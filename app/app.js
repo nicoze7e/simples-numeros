@@ -8,7 +8,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '2.0 · 2026-11-06';
+  var VERSION = '2.1 · 2026-11-13';
   var SCOPE = 'https://www.googleapis.com/auth/drive.file';
   var SB = 'https://sheets.googleapis.com/v4/spreadsheets/';
   var BLOQUE = 101, ENTRADAS = 100, COLS = 'CDEFGHIJ';
@@ -71,6 +71,47 @@
       .then(function (r) { return r.json(); })
       .then(function (j) { if (j && j.user && j.user.emailAddress) LS.set('sn_hint', j.user.emailAddress); })
       .catch(function () { /* sin hint: igual funciona */ });
+  }
+
+  /* ---------- Ayuda para iniciar sesión (desde 2026-11-13) ---------- */
+  function urlApp() { return location.origin + location.pathname.replace(/index\.html$/, ''); }
+  /* Navegadores incrustados (WhatsApp, Instagram, Facebook, etc.): Google no deja iniciar sesión ahí. */
+  function esEmbebido() {
+    var u = navigator.userAgent || '';
+    if (/FBAN|FBAV|Instagram|MicroMessenger|Line\/|Snapchat|TikTok|Twitter|; wv\)/i.test(u)) return true;
+    return /iPhone|iPad|iPod/.test(u) && !/Safari\//.test(u) && !navigator.standalone;
+  }
+  function traducirError(c) {
+    var m = {
+      popup_failed_to_open: 'Tu navegador no abrió la ventana de Google. Abrí esta página directo en Safari (iPhone) o Chrome (Android), no dentro de WhatsApp o Instagram, o tocá «Probar de otra forma».',
+      popup_closed: 'Se cerró la ventana de Google antes de terminar. Probá de nuevo.',
+      cancelado: 'Se cerró la ventana de Google antes de terminar. Probá de nuevo.',
+      access_denied: 'No diste el permiso en Google. Sin él la app no puede guardar en tu planilla.',
+      gsi: 'Google todavía no cargó. Revisá tu conexión y probá de nuevo.',
+      tiempo: 'Google tardó demasiado en responder. Probá de nuevo o tocá «Probar de otra forma».'
+    };
+    return m[c] || ('Google devolvió un problema (' + c + '). Tocá «Probar de otra forma» o mandanos una captura de esta pantalla.');
+  }
+  /* Plan B: inicio de sesión por redirección. No usa ventanas emergentes: sirve en apps instaladas y en navegadores que las bloquean.
+   * Requiere que esta dirección esté en «URI de redireccionamiento autorizados» del cliente de OAuth (ver GUIA-OAUTH.md). */
+  function loginRedirect() {
+    var s = Math.random().toString(36).slice(2) + Date.now().toString(36), h = LS.get('sn_hint');
+    LS.set('sn_state', s);
+    location.href = 'https://accounts.google.com/o/oauth2/v2/auth?client_id=' + enc(cfg.clientId) + '&redirect_uri=' + enc(urlApp()) +
+      '&response_type=token&scope=' + enc(SCOPE) + '&state=' + enc(s) + '&include_granted_scopes=true&prompt=select_account' + (h ? '&login_hint=' + enc(h) : '');
+  }
+  function recibirRedirect() {
+    var h = location.hash || '';
+    if (h.indexOf('access_token=') < 0 && h.indexOf('error=') < 0) return;
+    var p = {};
+    h.replace(/^#/, '').split('&').forEach(function (kv) { var i = kv.indexOf('='); if (i > 0) p[decodeURIComponent(kv.slice(0, i))] = decodeURIComponent(kv.slice(i + 1)); });
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* sin historial */ }
+    var esperado = LS.get('sn_state'); LS.set('sn_state', null);
+    if (p.error) { st.msg = traducirError(p.error); st.diag = p.error; return; }
+    if (!p.access_token || !esperado || p.state !== esperado) { st.msg = 'No pude verificar la respuesta de Google. Probá de nuevo.'; st.diag = 'estado'; return; }
+    tok = p.access_token; exp = Date.now() + (Number(p.expires_in) || 3600) * 1000 - 60000;
+    LS.set('sn_tok', { t: tok, e: exp });
+    if (!LS.get('sn_hint')) guardarHint();
   }
   function esperarGsi(ms) {
     return new Promise(function (res, rej) {
@@ -553,10 +594,14 @@
       '<button type="button" id="bcfg" class="save in">GUARDAR</button></div>';
   }
   function vLogin() {
+    var emb = esEmbebido();
     return '<div class="bienvenida"><h2>Tus números son tuyos</h2><p>Iniciá sesión con Google para anotar en tu propia planilla. La app solo toca el archivo que elijas.</p>' +
+      (emb ? '<p class="aviso">Estás dentro de otra app (WhatsApp, Instagram…). Google no deja iniciar sesión acá: tocá los tres puntos o el ícono de la brújula y elegí «Abrir en Safari» o «Abrir en Chrome».</p>' : '') +
       (st.msg ? '<p class="aviso">' + esc(st.msg) + '</p>' : '') +
       '<button type="button" id="btnLogin" class="save in">INICIAR SESIÓN CON GOOGLE</button>' +
-      '<p class="hint">Google te va a pedir permiso para ver, editar, crear y borrar solo los archivos específicos de Drive que uses con esta app.</p></div>';
+      '<button type="button" id="btnLogin2" class="ghost">Probar de otra forma</button>' +
+      '<p class="hint">Google te va a pedir permiso para ver, editar, crear y borrar solo los archivos específicos de Drive que uses con esta app.</p>' +
+      (st.diag ? '<p class="hint">Código para soporte: ' + esc(st.diag) + ' · ' + esc(VERSION) + '</p>' : '') + '</div>';
   }
   function vPlanilla() {
     return '<div class="bienvenida"><h2>Elegí tu planilla</h2><p>Buscá tu planilla en tu Drive y tocá «Seleccionar».</p>' +
@@ -748,6 +793,7 @@
     });
   }
   function arrancar() {
+    recibirRedirect();
     cargarTok();
     if (!(cfg.clientId && cfg.apiKey && cfg.appId)) { st.vista = 'config'; render(); return; }
     esperarGsi(15000).catch(function () { /* se reintenta al tocar */ });
@@ -877,8 +923,12 @@
     on('#btnLogin', function () {
       initTc();
       if (!tc) { toastSimple('Google todavía está cargando. Probá en unos segundos.'); return; }
-      pedirToken('').then(arrancar).catch(function (e) { toastSimple('No se pudo iniciar sesión' + (e && e.message && e.message !== 'cancelado' ? ': ' + e.message : '.')); });
+      pedirToken('').then(arrancar).catch(function (e) {
+        var c = (e && e.message) || 'desconocido';
+        st.vista = 'login'; st.msg = traducirError(c); st.diag = c; render();
+      });
     });
+    on('#btnLogin2', function () { if (!cfg.clientId) { toastSimple('Falta configurar la app.'); return; } loginRedirect(); });
     on('#btnPick', elegirPlanilla);
     on('#bcfg', function () {
       var c = { clientId: $('#ccid').value.trim(), apiKey: $('#ckey').value.trim(), appId: $('#capp').value.trim() };
