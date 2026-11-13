@@ -8,9 +8,10 @@
  */
 (function () {
   'use strict';
-  var VERSION = '2.1 · 2026-11-13';
+  var VERSION = '2.3 · 2026-11-13';
   var SCOPE = 'https://www.googleapis.com/auth/drive.file';
   var SB = 'https://sheets.googleapis.com/v4/spreadsheets/';
+  var PLANTILLA = '1T7ZOiw6gbH2RNXbuQsfY6k017RCGqKGaMwC8wbGDfHg'; /* planilla base pública: cada persona hace su copia con /copy */
   var BLOQUE = 101, ENTRADAS = 100, COLS = 'CDEFGHIJ';
   var MESES = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
   var COL = ['--usd', '--ars', '--eur', '--c4', '--c5', '--c6', '--c7'];
@@ -604,10 +605,15 @@
       (st.diag ? '<p class="hint">Código para soporte: ' + esc(st.diag) + ' · ' + esc(VERSION) + '</p>' : '') + '</div>';
   }
   function vPlanilla() {
-    return '<div class="bienvenida"><h2>Elegí tu planilla</h2><p>Buscá tu planilla en tu Drive y tocá «Seleccionar».</p>' +
+    return '<div class="bienvenida"><h2>Tu planilla</h2><p>La planilla es el producto: ahí queda todo lo que anotás. Esta app solo la llena desde el celular. Son 2 pasos, una sola vez.</p>' +
       (st.msg ? '<p class="aviso">' + esc(st.msg) + '</p>' : '') +
-      '<button type="button" id="btnPick" class="save in">ELEGIR MI PLANILLA</button>' +
-      '<p class="hint">¿Ves un cartel de error? Abrí la app directo en Safari o Chrome (no dentro de WhatsApp o Instagram) y probá de nuevo.</p></div>';
+      '<p><b>1 · Hacé tu copia.</b> Se abre en una pestaña nueva; poné el nombre que quieras y tocá «Hacer una copia». Después volvé acá.</p>' +
+      '<a class="save in lnk" id="btnCopia" href="https://docs.google.com/spreadsheets/d/' + PLANTILLA + '/copy" target="_blank" rel="noopener">1 · HACER MI COPIA</a>' +
+      '<p><b>2 · Elegila acá.</b> Buscá la copia que acabás de hacer y tocá «Seleccionar».</p>' +
+      '<button type="button" id="btnPick" class="save in">2 · ELEGIR MI PLANILLA</button>' +
+      '<p class="hint">Si el selector aparece vacío, todavía no hiciste la copia (paso 1) con la cuenta con la que iniciaste sesión.</p>' +
+      '<p class="hint">¿Ves un cartel de error? Abrí la app directo en Safari o Chrome (no dentro de WhatsApp o Instagram, y no en pestaña privada) y probá de nuevo.</p>' +
+      (st.diag ? '<p class="hint">Código para soporte: ' + esc(st.diag) + ' · ' + esc(VERSION) + '</p>' : '') + '</div>';
   }
   function vAjustes() {
     var id = fid();
@@ -805,14 +811,38 @@
     }
     cargar();
   }
+  /* Selector de planilla (Google Picker). Es la única forma de darle a la app permiso sobre UNA planilla con el permiso drive.file. */
+  function planillaFalla(codigo) {
+    var m = {
+      gapi: 'El selector de Google no cargó. Revisá tu conexión y probá de nuevo.',
+      timeout: 'El selector de Google tardó demasiado en cargar. Probá de nuevo.',
+      no_cargo: 'El selector no apareció. Abrí la app en una pestaña normal (no privada). En iPhone: Ajustes → Safari → desactivá «Impedir seguimiento entre sitios» mientras elegís la planilla, o usá Chrome.',
+      sin_sesion: 'Tu sesión de Google venció. Iniciá sesión de nuevo.'
+    };
+    st.msg = m[codigo] || ('El selector devolvió un problema (' + codigo + ').'); st.diag = 'selector ' + codigo;
+    if (st.vista === 'planilla') render(); else toastSimple(st.msg, true);
+  }
   function elegirPlanilla() {
-    if (!window.gapi) { toastSimple('El selector de Google todavía no cargó. Probá en unos segundos.'); return; }
-    gapi.load('picker', function () {
-      var v = new google.picker.DocsView(google.picker.ViewId.SPREADSHEETS).setMode(google.picker.DocsViewMode.LIST);
-      new google.picker.PickerBuilder().addView(v).setOAuthToken(tok).setDeveloperKey(cfg.apiKey).setAppId(cfg.appId).setOrigin(location.protocol + '//' + location.host)
-        .setCallback(function (d) {
-          if (d.action === google.picker.Action.PICKED) { LS.set('sn_file', d.docs[0].id); st.msg = ''; cargar(); }
-        }).build().setVisible(true);
+    if (!window.gapi) { planillaFalla('gapi'); return; }
+    if (!vivo()) { st.vista = 'login'; st.msg = 'Tu sesión venció. Iniciá sesión de nuevo.'; render(); return; }
+    var visto = false, elegido = false;
+    gapi.load('picker', {
+      callback: function () {
+        try {
+          var v = new google.picker.DocsView(google.picker.ViewId.SPREADSHEETS).setMode(google.picker.DocsViewMode.LIST).setIncludeFolders(false);
+          new google.picker.PickerBuilder().addView(v).setLocale('es').setTitle('Elegí tu planilla de ZIMPLES NUMBERZ')
+            .setOAuthToken(tok).setDeveloperKey(cfg.apiKey).setAppId(cfg.appId).setOrigin(location.protocol + '//' + location.host)
+            .setCallback(function (d) {
+              if (d.action === google.picker.Action.LOADED) { visto = true; return; }
+              if (d.action === google.picker.Action.CANCEL && !elegido) { st.msg = '¿No viste tu planilla? Primero hacé tu copia con el botón 1 y después elegila.'; st.diag = ''; if (st.vista === 'planilla') render(); return; }
+              if (d.action === google.picker.Action.PICKED) { elegido = true; LS.set('sn_file', d.docs[0].id); st.msg = ''; st.diag = ''; cargar(); }
+            }).build().setVisible(true);
+          setTimeout(function () { if (!visto && !elegido) planillaFalla('no_cargo'); }, 15000);
+        } catch (e) { planillaFalla('picker_' + ((e && e.message) || 'error')); }
+      },
+      onerror: function () { planillaFalla('gapi'); },
+      timeout: 10000,
+      ontimeout: function () { planillaFalla('timeout'); }
     });
   }
 
