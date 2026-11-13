@@ -1,14 +1,14 @@
 /* ZIMPLES NUMBERZ · app (PWA)
  * Habla directo con la API de Google Sheets desde el celular, con el permiso drive.file.
  * No hay servidor intermedio. Estructura que asume la planilla:
- *  - REGISTRO: el mes 1 empieza en la fila 19 y cada bloque siguiente 101 filas más abajo (100 renglones por mes).
+ *  - Hoja del año («AÑO 2026»; en planillas viejas, «REGISTRO»): el mes 1 empieza en la fila 19 y cada bloque siguiente 101 filas más abajo (100 renglones por mes).
  *    Columnas: C fecha (fórmula), D moneda, E monto, F tipo, G detalle.
  *  - AJUSTES: B3:B9 monedas.
- *  - Panel de REGISTRO: C2:J2 monedas, C1:J1 saldo por moneda, C12:J12 cotización.
+ *  - Panel de la hoja del año: C2:J2 monedas, C1:J1 saldo por moneda, C12:J12 cotización.
  */
 (function () {
   'use strict';
-  var VERSION = '2.3 · 2026-11-13';
+  var VERSION = '2.5 · 2026-11-13';
   var SCOPE = 'https://www.googleapis.com/auth/drive.file';
   var SB = 'https://sheets.googleapis.com/v4/spreadsheets/';
   var PLANTILLA = '1T7ZOiw6gbH2RNXbuQsfY6k017RCGqKGaMwC8wbGDfHg'; /* planilla base pública: cada persona hace su copia con /copy */
@@ -16,7 +16,7 @@
   var MESES = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
   var COL = ['--usd', '--ars', '--eur', '--c4', '--c5', '--c6', '--c7'];
   /* Perfiles de planilla. La app detecta cuál es por los nombres de las pestañas (ver prep()).
-   *  simples  = la plantilla del producto (pestaña REGISTRO + AJUSTES).
+   *  simples  = la plantilla del producto (pestaña «AÑO yyyy» + AJUSTES; en copias viejas, REGISTRO + AJUSTES).
    *  personal = la planilla propia del autor (pestaña «AÑO <año>», monedas en su panel). Es una excepción. */
   var PERFILES = {
     simples: { id: 'simples', hoja: 'REGISTRO', primera: 19, monedas: 'AJUSTES!B3:B9', enc: 'C2:J2', saldos: 'C1:J1', tasas: 'C12:J12', panel: [0, 1, 2, 3, 5, 6, 7], fechaManual: false },
@@ -188,15 +188,21 @@
       var t = (j.sheets || []).map(function (s) { return s.properties.title; });
       var anio = 'AÑO ' + new Date().getFullYear();
       var actual = new Date().getFullYear(), anios = [], m;
+      var aniosT = [];
+      t.forEach(function (n) { if ((m = /^AÑO (\d{4})$/.exec(n))) aniosT.push({ hoja: n, anio: +m[1] }); });
       if (t.indexOf('REGISTRO') >= 0) {
+        /* Copias viejas de la plantilla: REGISTRO = año en curso · «REGISTRO 2025» = años anteriores archivados */
         P = PERFILES.simples; P.hoja = 'REGISTRO';
-        /* REGISTRO = año en curso · «REGISTRO 2025» = años anteriores archivados */
         t.forEach(function (n) { if ((m = /^REGISTRO (\d{4})$/.exec(n))) anios.push({ hoja: n, anio: +m[1] }); });
         anios.push({ hoja: 'REGISTRO', anio: actual });
+      } else if (t.indexOf('AJUSTES') >= 0 && aniosT.length) {
+        /* Plantilla actual: una hoja por año («AÑO 2026»). Usa la del año en curso; si no existe todavía, la más reciente. */
+        P = PERFILES.simples;
+        var cur = aniosT.filter(function (x) { return x.anio === actual; })[0] || aniosT.slice().sort(function (x, y) { return y.anio - x.anio; })[0];
+        P.hoja = cur.hoja; anios = aniosT;
       } else if (t.indexOf(anio) >= 0) {
-        P = PERFILES.personal; P.hoja = anio;
-        t.forEach(function (n) { if ((m = /^AÑO (\d{4})$/.exec(n))) anios.push({ hoja: n, anio: +m[1] }); });
-      } else throw new Error('Esta planilla no tiene la pestaña REGISTRO (ni «' + anio + '»). Pestañas que veo: ' + t.join(', '));
+        P = PERFILES.personal; P.hoja = anio; anios = aniosT;
+      } else throw new Error('Esta planilla no tiene una hoja «' + anio + '» con la pestaña AJUSTES (ni REGISTRO). Pestañas que veo: ' + t.join(', '));
       anios.sort(function (a, b) { return a.anio - b.anio; });
       P.anios = anios;
       perfilDe = fid();
@@ -615,10 +621,61 @@
       '<p class="hint">¿Ves un cartel de error? Abrí la app directo en Safari o Chrome (no dentro de WhatsApp o Instagram, y no en pestaña privada) y probá de nuevo.</p>' +
       (st.diag ? '<p class="hint">Código para soporte: ' + esc(st.diag) + ' · ' + esc(VERSION) + '</p>' : '') + '</div>';
   }
+
+  /* ---------- Instalar como app (desde 2026-11-13) ---------- */
+  var instalarEv = null;
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); instalarEv = e; if (st.vista === 'instalar') render(); });
+  function enStandalone() { return navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches); }
+  function esMovil() { return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || ''); }
+  function vInstalar() {
+    var ua = navigator.userAgent || '', ios = /iPhone|iPad|iPod/.test(ua);
+    var pasos = instalarEv ? '' :
+      (ios ? '<ol><li>Tocá <b>Compartir</b> (el cuadrado con la flecha hacia arriba, abajo en Safari).</li><li>Elegí <b>Agregar a pantalla de inicio</b> y tocá <b>Agregar</b>.</li><li><b>Abrí ZIMPLES desde el ícono nuevo</b> y seguí desde ahí.</li></ol>'
+           : '<ol><li>Tocá el menú <b>⋮</b> de Chrome, arriba a la derecha.</li><li>Elegí <b>Instalar app</b> (o «Agregar a pantalla principal») y confirmá.</li><li><b>Abrí ZIMPLES desde el ícono nuevo</b> y seguí desde ahí.</li></ol>');
+    return '<div class="bienvenida"><h2>Instalá ZIMPLES en tu celular</h2><p>Se abre con un toque desde tu pantalla de inicio, como cualquier otra app. Tarda un minuto y se hace una sola vez.</p>' +
+      (esEmbebido() ? '<p class="aviso">Estás dentro de otra app (WhatsApp, Instagram…). Abrí esta página en Safari o Chrome para poder instalarla.</p>' : '') +
+      (instalarEv ? '<button type="button" id="btnInstalar" class="save in">INSTALAR LA APP</button>' : pasos) +
+      '<button type="button" id="btnSeguir" class="ghost">Ya la instalé · seguir</button>' +
+      '<button type="button" id="btnSinInstalar" class="ghost">Seguir sin instalar</button>' +
+      '<p class="hint">Después de instalarla, abrila desde el ícono: ahí iniciás sesión y elegís tu planilla.</p></div>';
+  }
+
+  /* ---------- Ayuda y trucos (lo que antes decía la hoja «EMPEZAR AQUÍ») ---------- */
+  function vAyuda() {
+    return '<div class="ed ayuda"><h2>Cómo se usa</h2>' +
+      '<h3>1 · Anotá</h3><p>En <b>ANOTAR</b> elegí la moneda, escribí el monto y tocá SALIDA o INGRESO. En «detalle» contá con tus palabras qué pasó: no hace falta elegir categorías. La fecha se pone sola.</p>' +
+      '<h3>2 · Mirá</h3><p><b>MI MES</b> muestra los totales del mes, tus cuentas y tus últimos movimientos. <b>ANÁLISIS</b> muestra tu tasa de ahorro y cuánto gastás por día. Para ver todo con calma, abrí tu planilla (engranaje → ABRIR MI PLANILLA): arriba de la hoja del año (por ejemplo, AÑO 2026) está el panel con el total de cada moneda y los gráficos.</p>' +
+      '<h3>3 · Cada mes tiene su bloque</h3><p>La app anota siempre en el mes de hoy. En la planilla, cada mes tiene su propio bloque de 100 renglones: con el + o el − del costado abrís o cerrás un mes.</p>' +
+      '<h2>Trucos</h2>' +
+      '<h3>Cambiar una moneda por otra</h3><p>Usá la pestaña <b>CAMBIO</b>. Anota los dos movimientos con la palabra «cambio» en el detalle. Así no distorsionan lo que ahorrás: el análisis no los cuenta y, en la planilla, el filtro CAMBIOS los oculta.</p>' +
+      '<h3>Filtros de la planilla</h3><p>A la izquierda del panel (moneda, cambios, tipo, mes y días) podés mirar tu información de otra forma. Volvé a TODOS, TODAS o INCLUIR para ver todo.</p>' +
+      '<h3>Sumar una moneda o tus cuentas</h3><p>Engranaje → <b>MIS MONEDAS</b> para agregar o quitar monedas. Tus cuentas (efectivo, banco, billetera) están en <b>MI MES</b>.</p>' +
+      '<h3>Empezar un año nuevo</h3><p>En la planilla, clic derecho sobre la pestaña del año (por ejemplo, AÑO 2026) → <b>Duplicar</b>. Ponele a la copia el año nuevo (AÑO 2027) y borrá en ella los movimientos del año anterior. La app usa la hoja del año en que estás; la del año anterior queda de archivo y la app la usa para comparar.</p>' +
+      '<h3>Tus datos son tuyos</h3><p>Todo lo que anotás queda en tu planilla, dentro de tu cuenta de Google. Nadie más lo ve. El permiso de Google es solo para el archivo que elegiste con la app, no para el resto de tu Drive. Podés quitarlo cuando quieras en myaccount.google.com/permissions.</p>' +
+      '<h3>Si la fecha no se escribe sola en la planilla</h3><p>La app activa el cálculo iterativo al elegir tu planilla. Si igual no pasa, en la planilla: Archivo → Configuración → Cálculo → «Cálculo iterativo: Activado».</p>' +
+      '<button type="button" id="hVolver" class="save in">VOLVER</button></div>';
+  }
+
+  /* La planilla necesita el «cálculo iterativo» para escribir la fecha sola: la app lo activa una vez, solo en planillas de ZIMPLES (con AJUSTES y una hoja del año, o REGISTRO). */
+  function asegurarIterativo() {
+    var id = fid(); if (!id) return Promise.resolve();
+    return api(SB + id + '?fields=properties.iterativeCalculationSettings,sheets.properties.title').then(function (j) {
+      var titulos = (j.sheets || []).map(function (x) { return x.properties.title; });
+      var esZ = titulos.indexOf('REGISTRO') >= 0 || (titulos.indexOf('AJUSTES') >= 0 && titulos.some(function (x) { return /^AÑO \d{4}$/.test(x); }));
+      if (!esZ) return;
+      if (j.properties && j.properties.iterativeCalculationSettings) return;
+      return api(SB + id + ':batchUpdate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requests: [{ updateSpreadsheetProperties: { properties: { iterativeCalculationSettings: { maxIterations: 50, convergenceThreshold: 0.05 } }, fields: 'iterativeCalculationSettings' } }] })
+      });
+    }).catch(function () { /* si no se puede, la ayuda explica cómo hacerlo a mano */ });
+  }
+
   function vAjustes() {
     var id = fid();
     return '<div class="ed"><h2>Ajustes</h2>' +
       (id ? '<a class="ghost lnk" href="https://docs.google.com/spreadsheets/d/' + esc(id) + '/edit" target="_blank" rel="noopener">ABRIR MI PLANILLA</a>' : '') +
+      '<button type="button" id="aAyuda" class="ghost">CÓMO SE USA Y TRUCOS</button>' +
       '<button type="button" id="aMon" class="ghost">MIS MONEDAS</button>' +
       '<button type="button" id="aAct" class="ghost">ACTUALIZAR DATOS</button>' +
       '<button type="button" id="aCambiar" class="ghost">CAMBIAR DE PLANILLA</button>' +
@@ -686,13 +743,15 @@
     var s = $('#screen'), app = $('#app');
     var enApp = st.vista === 'app';
     app.classList.toggle('sinTabs', !enApp);
-    $('#gear').hidden = !(enApp || st.vista === 'ajustes' || st.vista === 'monedas');
+    $('#gear').hidden = !(enApp || st.vista === 'ajustes' || st.vista === 'monedas' || st.vista === 'ayuda');
     if (st.vista === 'cargando') { s.innerHTML = '<div class="vacio">Cargando…</div>'; $('#mesTop').textContent = ''; return; }
     if (st.vista === 'error') { s.innerHTML = '<div class="vacio">No pude leer tu planilla.<br>' + esc(st.error) + '<br><button type="button" class="ghost" id="reload">REINTENTAR</button></div>'; bind(); return; }
     if (st.vista === 'config') s.innerHTML = vConfig();
     else if (st.vista === 'login') s.innerHTML = vLogin();
     else if (st.vista === 'planilla') s.innerHTML = vPlanilla();
     else if (st.vista === 'ajustes') s.innerHTML = vAjustes();
+    else if (st.vista === 'ayuda') s.innerHTML = vAyuda();
+    else if (st.vista === 'instalar') s.innerHTML = vInstalar();
     else if (st.vista === 'monedas') s.innerHTML = vMonedas();
     else if (!D.monedas.length) s.innerHTML = '<div class="vacio">Todavía no hay monedas.<br>Agregá la primera para empezar.<br><button type="button" class="ghost" id="goMon">AGREGAR MONEDA</button></div>';
     else s.innerHTML = st.fc ? vCuenta() : st.edit ? vEditar() : st.tab === 'anotar' ? vAnotar() : st.tab === 'cambio' ? vCambio() : st.tab === 'analisis' ? vAnalisis() : vMes();
@@ -803,6 +862,7 @@
     cargarTok();
     if (!(cfg.clientId && cfg.apiKey && cfg.appId)) { st.vista = 'config'; render(); return; }
     esperarGsi(15000).catch(function () { /* se reintenta al tocar */ });
+    if (!fid() && !vivo() && esMovil() && !enStandalone() && !LS.get('sn_inst')) { st.vista = 'instalar'; render(); return; }
     if (!fid()) { st.vista = vivo() ? 'planilla' : 'login'; render(); return; }
     if (!vivo()) {
       st.vista = 'cargando'; render();
@@ -835,7 +895,7 @@
             .setCallback(function (d) {
               if (d.action === google.picker.Action.LOADED) { visto = true; return; }
               if (d.action === google.picker.Action.CANCEL && !elegido) { st.msg = '¿No viste tu planilla? Primero hacé tu copia con el botón 1 y después elegila.'; st.diag = ''; if (st.vista === 'planilla') render(); return; }
-              if (d.action === google.picker.Action.PICKED) { elegido = true; LS.set('sn_file', d.docs[0].id); st.msg = ''; st.diag = ''; cargar(); }
+              if (d.action === google.picker.Action.PICKED) { elegido = true; LS.set('sn_file', d.docs[0].id); st.msg = ''; st.diag = ''; asegurarIterativo().then(function () { cargar(); }); }
             }).build().setVisible(true);
           setTimeout(function () { if (!visto && !elegido) planillaFalla('no_cargo'); }, 15000);
         } catch (e) { planillaFalla('picker_' + ((e && e.message) || 'error')); }
@@ -951,6 +1011,7 @@
     on('#ecancel', function () { st.edit = null; render(); });
     on('#reload', cargar); on('#reA', cargarAnalisis);
     on('#btnLogin', function () {
+      if (navigator.standalone === true && cfg.clientId) { loginRedirect(); return; } /* iPhone con la app instalada: las ventanas emergentes fallan, se usa redirección */
       initTc();
       if (!tc) { toastSimple('Google todavía está cargando. Probá en unos segundos.'); return; }
       pedirToken('').then(arrancar).catch(function (e) {
@@ -960,6 +1021,11 @@
     });
     on('#btnLogin2', function () { if (!cfg.clientId) { toastSimple('Falta configurar la app.'); return; } loginRedirect(); });
     on('#btnPick', elegirPlanilla);
+    on('#aAyuda', function () { st.vista = 'ayuda'; render(); });
+    on('#hVolver', function () { st.vista = 'ajustes'; render(); });
+    on('#btnInstalar', function () { if (!instalarEv) return; instalarEv.prompt(); instalarEv.userChoice.then(function () { instalarEv = null; LS.set('sn_inst', 1); }).catch(function () { /* sin elección */ }); });
+    on('#btnSeguir', function () { LS.set('sn_inst', 1); st.vista = 'login'; st.msg = ''; render(); });
+    on('#btnSinInstalar', function () { LS.set('sn_inst', 1); st.vista = 'login'; st.msg = ''; render(); });
     on('#bcfg', function () {
       var c = { clientId: $('#ccid').value.trim(), apiKey: $('#ckey').value.trim(), appId: $('#capp').value.trim() };
       if (!c.clientId || !c.apiKey || !c.appId) { toastSimple('Faltan datos.'); return; }
